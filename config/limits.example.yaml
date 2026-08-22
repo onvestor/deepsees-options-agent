@@ -45,8 +45,12 @@ broker:
 prefilter:
   dte_min: null                         # int, days to expiry
   dte_max: null                         # int
-  delta_min: null                       # float, absolute delta
-  delta_max: null                       # float, absolute delta
+  delta_min: null                       # float, absolute delta, single leg
+  delta_max: null                       # float, absolute delta, single leg
+  vertical_long_delta_min: null         # float, vertical long leg
+  vertical_long_delta_max: null         # float
+  vertical_short_delta_min: null        # float, vertical short leg, further OTM
+  vertical_short_delta_max: null        # float
   min_open_interest: null               # int
   min_volume: null                      # int
   max_spread_pct_of_mid: null           # float, e.g. 0.05 == 5%
@@ -75,6 +79,9 @@ metrics:
   modeled_hold_hours: null              # float, hold assumed by modeled P&L
   theta_day_hours: null                 # float, hours per theta-day (24 =
                                         #   calendar basis, as Alpaca quotes it)
+  breakeven_discount_k: null            # float, how hard reward-to-risk is
+                                        #   discounted per ATR of breakeven
+                                        #   distance when ranking verticals
   max_theta_pct_per_day: null           # float, theta / premium
   min_gamma: null                       # float
   max_iv_vs_rv_ratio: null              # float

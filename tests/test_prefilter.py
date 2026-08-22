@@ -16,6 +16,21 @@ from src.decisionlog.adapters import prefilter_payload
 from src.options.prefilter import evaluate_candidates, run_prefilter
 from tests.test_cache import FakeClock
 
+def _band():
+    from src.config import load_config
+
+    limits = load_config().limits
+    return limits.get_float("prefilter.delta_min"), limits.get_float("prefilter.delta_max")
+
+
+DELTA_MIN, DELTA_MAX = _band()
+# Fixtures are derived from the configured band, never hardcoded. The strategy
+# revision moved the single-leg band from 0.30-0.60 to 0.55-0.75 and every
+# hardcoded delta in this file silently started testing a different gate.
+IN_BAND = round((DELTA_MIN + DELTA_MAX) / 2, 4)
+JUST_OVER_BAND = round(DELTA_MAX * 1.05, 4)      # ~5% out: near-boundary
+FAR_OVER_BAND = round(min(0.99, DELTA_MAX * 1.35), 4)   # well out: not near
+
 SESSION = date(2026, 8, 24)
 SESSIONS = tuple(
     SESSION + timedelta(days=d) for d in (0, 1, 2, 3, 4, 7, 8, 9, 10, 11, 14, 15, 16)
@@ -47,7 +62,7 @@ def spec(symbol="SPY260825C00100000", strike=100.0, expiry=date(2026, 8, 25),
     )
 
 
-def quote(symbol="SPY260825C00100000", bid=1.97, ask=2.03, delta=0.50, gamma=0.04,
+def quote(symbol="SPY260825C00100000", bid=1.97, ask=2.03, delta=IN_BAND, gamma=0.04,
           theta=-0.20, iv=0.30) -> OptionQuote:
     """Default is a contract that passes every gate comfortably.
 
@@ -103,7 +118,7 @@ def test_a_contract_that_passes_every_gate_but_cannot_be_scored_is_rejected(cale
 
 
 def test_all_failing_reasons_are_recorded_not_just_the_first(calendar, limits):
-    bad = quote(bid=0.01, ask=5.0, delta=0.99)
+    bad = quote(bid=0.01, ask=5.0, delta=FAR_OVER_BAND)
     [candidate] = evaluate([spec(open_interest=0)], [bad], calendar, limits)
     assert {"bid below floor", "open interest", "spread", "delta band"} <= set(candidate.failures)
 
@@ -163,20 +178,20 @@ def test_missing_snapshot_yields_no_quote(calendar, limits):
 
 
 def test_single_reason_reject_records_how_close_it_came(calendar, limits):
-    """delta_max is 0.60; 0.63 is 5% over, comfortably near-boundary."""
-    [candidate] = evaluate([spec()], [quote(delta=0.63)], calendar, limits)
+    """5% past delta_max is comfortably inside the near-boundary window."""
+    [candidate] = evaluate([spec()], [quote(delta=JUST_OVER_BAND)], calendar, limits)
     assert candidate.failures == ("delta band",)
     assert candidate.boundary_distance == pytest.approx(0.05, abs=0.01)
 
 
 def test_a_far_miss_is_not_near_boundary(calendar, limits):
-    [candidate] = evaluate([spec()], [quote(delta=0.99)], calendar, limits)
+    [candidate] = evaluate([spec()], [quote(delta=FAR_OVER_BAND)], calendar, limits)
     assert candidate.failures == ("delta band",)
     assert candidate.boundary_distance > 0.20
 
 
 def test_multi_reason_rejects_have_no_boundary_distance(calendar, limits):
-    [candidate] = evaluate([spec(open_interest=0)], [quote(delta=0.99)], calendar, limits)
+    [candidate] = evaluate([spec(open_interest=0)], [quote(delta=FAR_OVER_BAND)], calendar, limits)
     assert len(candidate.failures) > 1
     assert candidate.boundary_distance is None
 
@@ -190,9 +205,9 @@ def test_boundary_detail_keeps_only_near_misses_and_kept_symbols(calendar, limit
     keep = spec(symbol="KEEP260825C00100000", open_interest=0)
     candidates = evaluate(
         [near, far, keep],
-        [quote("NEAR260825C00100000", delta=0.63),
-         quote("FARX260825C00100000", delta=0.99),
-         quote("KEEP260825C00100000", delta=0.99)],
+        [quote("NEAR260825C00100000", delta=JUST_OVER_BAND),
+         quote("FARX260825C00100000", delta=FAR_OVER_BAND),
+         quote("KEEP260825C00100000", delta=FAR_OVER_BAND)],
         calendar, limits,
     )
     payload = prefilter_payload(
@@ -208,14 +223,14 @@ def test_boundary_detail_keeps_only_near_misses_and_kept_symbols(calendar, limit
 
 
 def test_aggregate_detail_keeps_no_rows(calendar, limits):
-    candidates = evaluate([spec()], [quote(delta=0.63)], calendar, limits)
+    candidates = evaluate([spec()], [quote(delta=JUST_OVER_BAND)], calendar, limits)
     payload = prefilter_payload(candidates, thresholds={}, detail="aggregate")
     assert payload.rejections == {}
     assert payload.reason_counts
 
 
 def test_full_detail_keeps_everything(calendar, limits):
-    candidates = evaluate([spec()], [quote(delta=0.99)], calendar, limits)
+    candidates = evaluate([spec()], [quote(delta=FAR_OVER_BAND)], calendar, limits)
     payload = prefilter_payload(candidates, thresholds={}, detail="full")
     assert len(payload.rejections) == 1
 
@@ -226,7 +241,7 @@ def test_boundary_detail_is_much_smaller_than_full(calendar, limits):
     for i in range(200):
         symbol = f"SPY2608{25 + i % 3}C{100000 + i * 1000:08d}"
         specs.append(spec(symbol=symbol, strike=100.0 + i))
-        quotes.append(quote(symbol=symbol, delta=0.95))     # all far misses
+        quotes.append(quote(symbol=symbol, delta=FAR_OVER_BAND))   # all far misses
     candidates = evaluate(specs, quotes, calendar, limits)
     full = prefilter_payload(candidates, thresholds={}, detail="full")
     boundary = prefilter_payload(candidates, thresholds={}, detail="boundary")
@@ -289,7 +304,7 @@ def build_universe(n=30):
         # Vary the spread so ranking has something to discriminate on, while
         # keeping every one inside the 6% cap so the cap is not what is tested.
         half = 0.02 + (i % 5) * 0.004
-        quotes.append(quote(symbol=symbol, bid=2.00 - half, ask=2.00 + half, delta=0.45))
+        quotes.append(quote(symbol=symbol, bid=2.00 - half, ask=2.00 + half, delta=IN_BAND))
     return specs, quotes
 
 
@@ -363,8 +378,8 @@ def test_coverage_is_reported_for_the_narrowed_window(config, calendar):
 
 def test_near_boundary_helper_filters_by_distance(config, calendar):
     specs, quotes = build_universe(n=6)
-    quotes[0] = replace(quotes[0], delta=0.63)      # just outside
-    quotes[1] = replace(quotes[1], delta=0.99)      # far outside
+    quotes[0] = replace(quotes[0], delta=JUST_OVER_BAND)   # just outside
+    quotes[1] = replace(quotes[1], delta=FAR_OVER_BAND)    # far outside
     clients = FakeClients(config, specs, quotes)
     result = run_prefilter(clients, "SPY", spot=100.0, atr=2.0, realized_vol=0.25,
                            calendar=calendar, order_session=SESSION, option_type="call")

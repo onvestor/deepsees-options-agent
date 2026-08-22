@@ -1,8 +1,24 @@
 # DeepSees Options Agent
 
-Autonomous multi-agent options trading system for the Alpaca AI Trading Agents Hackathon
-(28 Aug – 4 Sep 2026). Trades intraday debit structures on a curated liquid universe against
-Alpaca paper trading.
+Autonomous multi-agent **swing** options trading system for the Alpaca AI Trading Agents
+Hackathon (28 Aug – 4 Sep 2026). Directional theses on a curated liquid universe, expressed as
+**debit structures** rather than shares — long calls, long puts, and debit verticals — against
+Alpaca paper trading. The option is leverage on a stock-like directional view, not a
+volatility bet.
+
+**Hold horizon: 1–5 trading sessions.** This is a positional system. There is no intraday flat
+rule. All numeric values live in `config/limits.yaml`; bands quoted here are starting points to
+be set by measurement, not constants to hardcode.
+
+Three design consequences follow from the horizon, and must not drift:
+
+- **Theta matters, but less than friction.** Over a 3-session hold, round-trip spread cost on
+  an illiquid contract frequently exceeds theta. Optimise total friction, not theta alone.
+- **Vega is a live risk.** Vega scales with time to expiry. A long-dated contract can lose more
+  to an IV decline than it gains from a correct directional call — uncompensated risk for a
+  directional strategy.
+- **Overnight gap risk is real and unhedgeable by polling.** Positions are held through
+  sessions we cannot poll. Sizing must assume the stop can be gapped through.
 
 ---
 
@@ -179,7 +195,7 @@ loop sending a closing `mleg` order. Agent 5 and the deterministic exit layer mu
 
 **Expiry behaviour.** ITM contracts auto-exercise if ITM by ≥ $0.01. If buying power is
 insufficient, Alpaca sells the position out within an hour before expiry. Never rely on either
-as an exit path — the time-stop flat rule exists precisely to avoid them.
+as an exit path — the "never hold into expiry week" rule exists precisely to avoid them.
 
 **Paper NTAs lag.** Exercise/assignment/expiry activities sync to the Activities endpoint the
 *next* day, though balances and positions update instantly. Don't build same-day reconciliation
@@ -188,6 +204,124 @@ on NTAs.
 **Data feed.** Basic plan: IEX only for equities, indicative only for options. Indicators are
 therefore computed on a partial-volume view of the tape. This is a known limitation to disclose
 in the write-up, not a bug to chase. Historical option data only exists from Feb 2024.
+
+---
+
+## DTE — measured, not assumed
+
+`dte_band_days` is configurable. **Do not fix it before the Monday measurement.**
+
+Run the comparison on SPY, NVDA and AMD across three buckets — 30–45, 60–90, 120+ days — and
+report, for a modelled 3-session hold:
+
+| Metric | Why |
+|---|---|
+| `theta_pct_per_day` × 3 sessions | the cost longer DTE is meant to avoid |
+| `spread_cost_vs_expected_move` round trip | the cost longer DTE adds |
+| total friction per unit of delta | the number that actually decides it |
+| vega as % of premium | the risk longer DTE introduces |
+| premium per contract | see the capital constraint below |
+| contracts clearing the liquidity filters | long-dated contracts often fail OI/volume |
+| fraction of contracts spanning earnings | see the earnings section |
+
+**The capital constraint is likely to be binding.** At a 5%-of-equity cap on a $100k account,
+one position may not exceed $5,000. A 0.70-delta 4-month call on a $700+ underlying can cost
+$5,500–6,500 — a single contract that cannot be bought at all, and no sizing granularity even
+where it fits. Report how many contracts clear the caps in each bucket; a bucket where the
+answer is "one or zero" is not viable regardless of its theta profile.
+
+Expected outcome is that the middle bucket wins, but the measurement decides.
+
+**Hard constraint regardless of the band chosen:** expiry must clear the maximum hold window by
+a wide margin. Never manage a position in its final week — theta acceleration and widening
+spreads both bite there.
+
+---
+
+## Delta bands
+
+| Structure | Leg | Band |
+| --- | --- | --- |
+| Single leg | — | 0.55–0.75 |
+| Debit vertical | Long | 0.55–0.70 |
+| Debit vertical | Short | 0.25–0.35, same expiry, further OTM |
+
+Rationale for the prompt, not enforced in code: slightly ITM gives 55–75% participation in the
+underlying move with defined risk and modest theta. Past ~0.80 delta you are paying for
+intrinsic value and crossing wider spreads for a diminishing gain over simply holding stock.
+
+**Verticals need a viable hold window.** A debit spread converges toward maximum value only near
+expiry. On a long-dated contract over a 3-session hold a vertical barely moves — the short leg's
+decay offsets the long leg's gain. If the Monday measurement lands on a long DTE band, Agent 4's
+structure guidance should favour single-leg heavily.
+
+---
+
+## Signal cadence
+
+A 9 EMA cross on 5-minute bars is an intraday trigger and is **no longer appropriate**.
+
+- **Signal evaluation:** daily bars, with hourly as a secondary confirmation timeframe.
+- **Agent 1 (regime):** once per session pre-market, not every 30 minutes. Regime for a
+  multi-session hold is a daily judgment. The 30-minute profile lock becomes a full-session lock.
+- **Agent 2 (context):** once per session pre-market, unchanged in shape.
+- **Agent 5 (exit):** every 30 minutes per open position, plus immediately on a ±20% premium
+  move. Not every 5 minutes.
+
+This cuts the call budget by roughly an order of magnitude — ~250–400 per session down to
+~30–60. Latency tolerances relax accordingly.
+
+`src/signals/` is unaffected: the indicators are timeframe-agnostic pure functions. Only the bar
+frame passed in and the cadence of evaluation change.
+
+---
+
+## Exits
+
+Deterministic exits, always armed, independent of any model:
+
+- Hard stop: configurable, starting point −40% of premium paid
+- Profit target: configurable, starting point +75% of premium paid
+- **Max hold: 5 trading sessions.** Flat regardless of P&L.
+- **Hard exit before expiry week.** Never hold into the final week.
+- **No intraday flat rule.** Positions are held overnight by design.
+
+Two constraints specific to the horizon:
+
+1. **The stop can be gapped through.** A hard stop at −40% does not guarantee a −40% loss when
+   the underlying gaps overnight. Sizing must assume the realised loss can exceed the stop, and
+   the write-up should say so plainly.
+2. **There is no broker-side stop on a spread**, and our polling loop cannot run overnight.
+   Multi-session spread positions are therefore unprotected between sessions. Agent 5 and the
+   deterministic exit layer must both treat this as a known, disclosed limitation rather than
+   assuming coverage.
+
+---
+
+## Earnings exclusion
+
+An intraday trade never touches an earnings print. A 1–5 session hold straddles one routinely.
+Two separate exclusions are required, and they are not the same test.
+
+**1. Hold-window exclusion (hard, code, pre-model).** Exclude any symbol whose next earnings
+date falls within `max_hold_sessions + buffer_sessions` of the entry session. With a 5-session
+max hold and a 2-session buffer, that is any symbol reporting within 7 trading sessions. Runs in
+code before Agent 2 is called. No model override.
+
+**2. Contract-span exclusion (the subtle one).** A contract whose *expiry* spans an earnings date
+carries elevated implied volatility, because the market is pricing the event. Buying it means
+paying an event premium for a thesis that has nothing to do with the event — and the premium is
+priced into every contract in that expiry whether or not you hold through the print. So even
+when the hold window is clear, prefer contracts whose expiry precedes the earnings date. Where
+the chosen DTE band makes that impossible, flag it: the contract is systematically more
+expensive than its realised volatility justifies, and `iv_vs_rv20` will show it.
+
+**The longer the DTE band, the more contracts span an earnings print** — a 4-month contract on
+almost any single name spans at least one.
+
+**Data source.** Earnings dates are **not available from Alpaca's Trading API.** This gap is
+open and must be closed before Step 7 — the exclusion is worthless if the calendar is stale or
+missing. Fail closed: an unknown earnings date is treated as an earnings date.
 
 ---
 
@@ -257,7 +391,7 @@ Chooses among a deterministic survivor set, including whether to go single-leg o
   "structure": "single_leg|debit_vertical",
   "primary_symbol": "NVDA260904C00185000",
   "short_symbol": null,
-  "expected_hold_hours": 3,
+  "expected_hold_sessions": 3,
   "reason": "string, <=200 chars",
   "alternate_symbol": "NVDA260904C00190000"
 }
@@ -267,10 +401,26 @@ non-null when `structure == debit_vertical`, and must share expiry with `primary
 further OTM. On any failure, fall back to the deterministic best-ratio survivor as single-leg
 and log the fallback.
 
-Structure guidance for the prompt (not enforced in code): low IV rank plus strong regime
-confidence favours single-leg for maximum gamma and one spread to cross; elevated IV rank or
-moderate conviction favours a vertical. Note that a vertical crosses two bid-asks on entry and
-two on exit, which on a short intraday hold frequently exceeds the theta saved.
+Structure guidance for the prompt (not enforced in code):
+
+- **Low IV rank, strong regime confidence, DTE short enough for convergence** → debit vertical
+  is viable and reduces cost basis.
+- **Elevated IV rank** → single-leg long premium is expensive; a vertical's short leg offsets
+  some of that, but check `iv_vs_rv20` does not indicate the whole expiry is rich.
+- **Long DTE band, or a hold window short relative to DTE** → strongly favour single-leg. The
+  vertical's four bid-ask crossings will not be recovered.
+- **Contract spans earnings** → note it in the reason. Prefer an expiry that does not.
+
+A vertical crosses two bid-asks on entry and two on exit. `pct_of_max_capturable_at_hold` is the
+metric that decides whether those four crossings are earned: a debit spread converges toward
+max value only near expiry, so over a short hold on a long-dated contract the short leg's decay
+offsets the long leg's gain and the spread barely moves. A 3:1 reward-to-risk that captures 6%
+of max gain over the hold is worse than a single leg.
+
+The survivor set handed to the model remains capped at 12. Single legs rank on modelled P&L per
+unit of spread cost; verticals rank on **reward-to-risk exponentially discounted by breakeven
+distance in ATRs**. The model narrows; it never widens. Any structure or DTE outside the
+deterministic prefilter is not selectable, by construction.
 
 ### Agent 5 — Exit Manager
 Deterministic exits are always armed independently. The model may only tighten.
@@ -341,7 +491,9 @@ profile against a bar frame.
 *Acceptance:* unit tests on synthetic frames with known answers; zero network calls in
 `src/signals/`.
 
-**4 — Chain prefilter + metrics.** Survivor set plus the six computed metrics.
+**4 — Chain prefilter + metrics.** Survivor set plus the computed metrics — the six single-leg
+metrics, and for verticals `max_risk`, `max_gain`, `reward_to_risk` and
+`pct_of_max_capturable_at_hold`.
 *Acceptance:* on a live chain, returns a survivor set of plausible size with every metric
 populated and no NaNs.
 

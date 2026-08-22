@@ -41,9 +41,12 @@ from dataclasses import dataclass, asdict
 from typing import Literal, Sequence
 
 __all__ = [
+    "CONTRACT_MULTIPLIER",
     "ContractMetrics",
     "MetricError",
+    "VerticalMetrics",
     "compute_metrics",
+    "compute_vertical_metrics",
     "realized_volatility",
     "TRADING_DAYS_PER_YEAR",
 ]
@@ -51,6 +54,16 @@ __all__ = [
 OptionType = Literal["call", "put"]
 
 TRADING_DAYS_PER_YEAR = 252
+
+# One US equity option contract controls 100 shares. This is a contract
+# specification, not a tunable, so it lives here rather than in limits.yaml.
+#
+# Per-share and per-contract figures are kept explicitly separate throughout:
+# every ratio is computed per share (where the multiplier cancels), and every
+# dollar figure that sizing or the risk layer will consume is per contract
+# (where it must not). Mixing the two by a factor of 100 is the single easiest
+# way to size a position 100x wrong, so both forms are named and tested.
+CONTRACT_MULTIPLIER = 100
 
 
 class MetricError(ValueError):
@@ -127,6 +140,28 @@ class ContractMetrics:
     def is_finite(self) -> bool:
         """Acceptance requires every metric populated with no NaNs."""
         return all(math.isfinite(v) for v in self.as_dict().values())
+
+    # --- per-contract dollars, for sizing and the risk layer ---------------
+
+    @property
+    def premium_per_contract(self) -> float:
+        """What one contract costs at the mid, in dollars."""
+        return self.premium * CONTRACT_MULTIPLIER
+
+    @property
+    def cost_per_contract(self) -> float:
+        """What one contract costs paying the ask -- the number sizing spends."""
+        return (self.premium + self.spread / 2.0) * CONTRACT_MULTIPLIER
+
+    @property
+    def max_risk(self) -> float:
+        """A long option's maximum loss is the premium paid, in dollars.
+
+        Bounded, unlike its gain -- which is why single legs have no
+        reward-to-risk and are ranked on modeled P&L per unit of spread
+        instead. See :class:`VerticalMetrics` for the bounded case.
+        """
+        return self.cost_per_contract
 
 
 def compute_metrics(
@@ -236,4 +271,237 @@ def compute_metrics(
         implied_volatility=float(implied_volatility),
         realized_volatility=float(realized_vol),
         hold_hours=float(hold_hours),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Debit verticals
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class VerticalMetrics:
+    """A debit vertical's risk, reward, and how much of it a hold can capture.
+
+    A vertical differs from a single leg in the way that matters most to
+    sizing: **both sides are bounded**. Max risk is the net debit and max gain
+    is the width less that debit, both known at entry. That makes
+    reward-to-risk a real number, rather than the unbounded ratio a long call
+    has, and it is why verticals rank differently.
+
+    ``pct_of_max_capturable_at_hold`` is the metric that decides whether a
+    vertical earns its four bid-ask crossings at all. A debit spread converges
+    toward max value only near expiry; over a short hold on a long-dated
+    contract the short leg's decay offsets the long leg's gain and the spread
+    barely moves. A 3:1 reward-to-risk that captures 6% of max gain over the
+    hold is worse than a single leg, and this number is what exposes that.
+    """
+
+    # --- structure ---
+    option_type: OptionType
+    long_strike: float
+    short_strike: float
+    width: float
+    net_debit: float                      # per share
+
+    # --- the four headline figures, per contract in dollars ---
+    max_risk: float
+    max_gain: float
+    reward_to_risk: float
+    pct_of_max_capturable_at_hold: float
+
+    # --- per share, where the multiplier cancels ---
+    max_risk_per_share: float
+    max_gain_per_share: float
+    breakeven: float
+    breakeven_distance_atr: float
+    modeled_pnl_1atr: float
+    modeled_pnl_per_contract: float
+
+    # --- ranking ---
+    rank_score: float
+
+    # --- position greeks and friction, echoed ---
+    net_delta: float
+    net_gamma: float
+    net_theta: float
+    entry_spread_cost: float
+    round_trip_spread_cost: float
+
+    # --- inputs, echoed ---
+    spot: float
+    atr: float
+    hold_hours: float
+    multiplier: int
+
+    def as_dict(self) -> dict:
+        return asdict(self)
+
+    @property
+    def is_finite(self) -> bool:
+        return all(
+            math.isfinite(v)
+            for v in self.as_dict().values()
+            if isinstance(v, (int, float)) and not isinstance(v, bool)
+        )
+
+
+def compute_vertical_metrics(
+    *,
+    option_type: OptionType,
+    long_strike: float,
+    short_strike: float,
+    spot: float,
+    atr: float,
+    long_bid: float,
+    long_ask: float,
+    short_bid: float,
+    short_ask: float,
+    long_delta: float | None,
+    long_gamma: float | None,
+    long_theta: float | None,
+    short_delta: float | None,
+    short_gamma: float | None,
+    short_theta: float | None,
+    hold_hours: float,
+    theta_day_hours: float,
+    breakeven_discount_k: float,
+    multiplier: int = CONTRACT_MULTIPLIER,
+) -> VerticalMetrics:
+    """Compute a debit vertical's bounded risk/reward and its ranking score.
+
+    Entry is modelled honestly: the long leg is bought at the **ask** and the
+    short leg sold at the **bid**, so ``net_debit`` already contains both
+    crossings. Exit crosses both again, which ``round_trip_spread_cost``
+    records -- four crossings in total, the cost that most often makes a
+    short-hold vertical lose to a single leg.
+    """
+    for name, value in (
+        ("long_delta", long_delta), ("long_gamma", long_gamma), ("long_theta", long_theta),
+        ("short_delta", short_delta), ("short_gamma", short_gamma), ("short_theta", short_theta),
+    ):
+        if value is None:
+            raise MetricError(f"{name} is missing -- vertical is not scoreable")
+
+    if atr <= 0:
+        raise MetricError(f"atr must be positive, got {atr}")
+    if spot <= 0:
+        raise MetricError(f"spot must be positive, got {spot}")
+    if multiplier <= 0:
+        raise MetricError(f"multiplier must be positive, got {multiplier}")
+    if hold_hours < 0 or theta_day_hours <= 0:
+        raise MetricError(f"bad hold window: hold_hours={hold_hours} day={theta_day_hours}")
+    for label, bid, ask in (("long", long_bid, long_ask), ("short", short_bid, short_ask)):
+        if bid <= 0 or ask < bid:
+            raise MetricError(f"unusable {label} quote: bid={bid} ask={ask}")
+
+    # A debit call spread buys the lower strike; a debit put spread buys the
+    # higher. Getting this backwards builds a *credit* spread, which is out of
+    # scope entirely -- Level 3 covers debit structures only.
+    if option_type == "call":
+        if short_strike <= long_strike:
+            raise MetricError(
+                f"debit call vertical needs short_strike > long_strike, "
+                f"got {short_strike} <= {long_strike}"
+            )
+    elif option_type == "put":
+        if short_strike >= long_strike:
+            raise MetricError(
+                f"debit put vertical needs short_strike < long_strike, "
+                f"got {short_strike} >= {long_strike}"
+            )
+    else:
+        raise MetricError(f"unknown option_type {option_type!r}")
+
+    width = abs(short_strike - long_strike)
+    net_debit = long_ask - short_bid
+    if net_debit <= 0:
+        raise MetricError(
+            f"net debit must be positive, got {net_debit} -- that is a credit spread, "
+            "which is out of scope"
+        )
+    if net_debit >= width:
+        raise MetricError(f"net debit {net_debit} >= width {width} -- no achievable gain")
+
+    max_risk_per_share = net_debit
+    max_gain_per_share = width - net_debit
+    max_risk = max_risk_per_share * multiplier
+    max_gain = max_gain_per_share * multiplier
+    reward_to_risk = max_gain_per_share / max_risk_per_share
+
+    if option_type == "call":
+        breakeven = long_strike + net_debit
+        distance = breakeven - spot
+    else:
+        breakeven = long_strike - net_debit
+        distance = spot - breakeven
+    breakeven_distance_atr = distance / atr
+
+    # Position greeks. Long a spread is long the near leg and short the far
+    # one, so every position greek is the difference between them.
+    net_delta = abs(float(long_delta)) - abs(float(short_delta))
+    net_gamma = float(long_gamma) - float(short_gamma)
+    net_theta = float(long_theta) - float(short_theta)
+    if net_delta <= 0:
+        raise MetricError(
+            f"net delta {net_delta} is not positive -- the short leg is not further OTM"
+        )
+
+    directional = net_delta * atr + 0.5 * net_gamma * (atr ** 2)
+    decay = net_theta * (hold_hours / theta_day_hours)   # signed; normally negative
+    modeled = directional + decay
+
+    # A spread cannot be worth more than its width. Capping matters here in a
+    # way it does not for a single leg: an uncapped delta+gamma estimate on a
+    # narrow spread happily projects a gain the structure cannot pay.
+    capped = min(modeled, max_gain_per_share)
+    pct_of_max_capturable_at_hold = capped / max_gain_per_share
+
+    entry_spread_cost = (long_ask - long_bid) / 2.0 + (short_ask - short_bid) / 2.0
+    round_trip_spread_cost = entry_spread_cost * 2.0
+
+    # Reward-to-risk, discounted by how far the underlying must travel to break
+    # even. A 4:1 spread needing three ATRs of movement is not a better trade
+    # than a 2:1 needing half of one, and ranking on raw R:R systematically
+    # prefers the former -- the wide, cheap, far-OTM spread shows the most
+    # attractive ratio and almost never pays.
+    #
+    # The decay is EXPONENTIAL, not a 1/(1+kd) divisor. Reward-to-risk grows
+    # without bound as a spread moves OTM (a 0.45 debit on a 10-wide spread is
+    # 21:1) while a linear discount only ever divides by a small factor, so the
+    # junk spread still wins. Measured on exactly that pair: linear ranked the
+    # 21:1 / 5.2-ATR spread at 3.41 against 0.61 for a 1.27:1 / 1.1-ATR spread
+    # -- 5.6x the wrong way round. Exponential gives 0.11 against 0.42.
+    #
+    # Probability of travelling d ATRs falls off roughly exponentially, so this
+    # is also the shape the discount ought to have.
+    discount = math.exp(-breakeven_discount_k * max(0.0, breakeven_distance_atr))
+    rank_score = reward_to_risk * discount
+
+    return VerticalMetrics(
+        option_type=option_type,
+        long_strike=float(long_strike),
+        short_strike=float(short_strike),
+        width=width,
+        net_debit=net_debit,
+        max_risk=max_risk,
+        max_gain=max_gain,
+        reward_to_risk=reward_to_risk,
+        pct_of_max_capturable_at_hold=pct_of_max_capturable_at_hold,
+        max_risk_per_share=max_risk_per_share,
+        max_gain_per_share=max_gain_per_share,
+        breakeven=breakeven,
+        breakeven_distance_atr=breakeven_distance_atr,
+        modeled_pnl_1atr=capped,
+        modeled_pnl_per_contract=capped * multiplier,
+        rank_score=rank_score,
+        net_delta=net_delta,
+        net_gamma=net_gamma,
+        net_theta=net_theta,
+        entry_spread_cost=entry_spread_cost,
+        round_trip_spread_cost=round_trip_spread_cost,
+        spot=float(spot),
+        atr=float(atr),
+        hold_hours=float(hold_hours),
+        multiplier=int(multiplier),
     )
