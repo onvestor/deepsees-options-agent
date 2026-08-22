@@ -1,0 +1,47 @@
+# universe.example.yaml -- KEY NAMES AND SHAPE ONLY.
+#
+# This file is committed. config/universe.yaml is NOT. The real symbol list is
+# part of the edge and never enters the commit history.
+#
+#   cp config/universe.example.yaml config/universe.yaml
+#
+# src/config.py rejects `null` and any PLACEHOLDER string at load time, so this
+# file cannot be used as a working config by accident.
+
+schema_version: 1
+
+# The tradeable universe. Real file: liquid optionable US equities/ETFs.
+# `defaults` below applies to every symbol; `overrides` narrows per symbol.
+symbols:
+  - PLACEHOLDER_A
+  - PLACEHOLDER_B
+  - PLACEHOLDER_C
+
+# Applied to any symbol without an entry in `overrides`.
+defaults:
+  enabled: true                     # bool
+  max_concurrent_positions: null    # int, per symbol
+  size_scalar: null                 # float, multiplies base size (<= 1.0)
+  min_underlying_price: null        # float, dollars
+  max_underlying_price: null        # float, dollars
+  min_avg_daily_volume: null        # int, shares
+  min_option_open_interest: null    # int, contracts
+  max_spread_pct_of_mid: null       # float, overrides prefilter default
+  allowed_structures: []            # list[str], debit only
+  bar_timeframe: "PLACEHOLDER"      # e.g. "5Min"
+  bar_lookback_days: null           # int, warmup for indicators
+
+# Per-symbol overrides. Keys must be uppercase symbols present in `symbols`.
+# Any key omitted here falls back to `defaults` via Universe.override().
+overrides:
+  PLACEHOLDER_A:
+    size_scalar: null               # float, <= 1.0
+    max_spread_pct_of_mid: null     # float
+  PLACEHOLDER_B:
+    enabled: true                   # bool
+    bar_timeframe: "PLACEHOLDER"    # e.g. "1Min" for a faster name
+
+# Symbols never traded regardless of the list above. Checked before any model
+# call. Real file: names with known event risk or unusable option liquidity.
+blacklist:
+  - PLACEHOLDER_X

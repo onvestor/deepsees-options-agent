@@ -1,0 +1,167 @@
+# limits.example.yaml -- KEY NAMES ONLY.
+#
+# This file is committed. config/limits.yaml is NOT. Every value here is a
+# placeholder; copy this file to limits.yaml and fill in real values there.
+#
+#   cp config/limits.example.yaml config/limits.yaml
+#
+# src/config.py rejects `null` and any REPLACE_ME string at load time, so this
+# file cannot be used as a working config by accident.
+#
+# Comments describe type, unit and direction only. Never record a tuned value
+# here -- the commit history goes public.
+
+schema_version: 1
+
+# --- Session windows (America/New_York) ------------------------------------
+session:
+  market_open_et: "REPLACE_ME"          # "HH:MM"
+  market_close_et: "REPLACE_ME"         # "HH:MM"
+  first_entry_et: "REPLACE_ME"          # "HH:MM" -- no entries before this
+  last_entry_et: "REPLACE_ME"           # "HH:MM" -- no new entries after this
+  flat_by_et: "REPLACE_ME"              # "HH:MM" -- hard time-stop, all flat
+  skip_dates: []                        # list of "YYYY-MM-DD" to sit out
+
+# --- Two-tier cache (see CLAUDE.md: never a single 60s cache) --------------
+cache:
+  contracts_ttl_seconds: null           # int, contract universe layer
+  quotes_ttl_seconds: null              # int, snapshot quotes + greeks layer
+
+# --- Broker behaviour ------------------------------------------------------
+broker:
+  data_feed_equities: "REPLACE_ME"      # "iex" on the Basic plan
+  data_feed_options: "REPLACE_ME"       # "indicative" on the Basic plan
+  request_timeout_seconds: null         # float
+  retry_attempts: null                  # int -- then halt new entries
+  backoff_base_seconds: null            # float, exponential base
+  contracts_page_limit: null            # int, <= 100 per Alpaca default
+  require_paper_base_url: true          # bool -- refuse to arm against live
+
+# --- Deterministic chain prefilter (runs BEFORE any model call) ------------
+prefilter:
+  dte_min: null                         # int, days to expiry
+  dte_max: null                         # int
+  delta_min: null                       # float, absolute delta
+  delta_max: null                       # float, absolute delta
+  min_open_interest: null               # int
+  min_volume: null                      # int
+  max_spread_pct_of_mid: null           # float, e.g. 0.05 == 5%
+  max_spread_abs: null                  # float, dollars per contract
+  min_bid: null                         # float, dollars
+  max_survivors_per_symbol: null        # int, cap handed to Agent 4
+  exclude_days_before_earnings: null    # int -- filtered in code, pre-model
+
+# --- Computed metrics: acceptance bands ------------------------------------
+metrics:
+  max_theta_pct_per_day: null           # float, theta / premium
+  min_gamma: null                       # float
+  max_iv_vs_rv_ratio: null              # float
+  max_spread_cost_pct_of_premium: null  # float
+  max_breakeven_move_pct: null          # float, underlying move to breakeven
+  min_modeled_pnl_ratio: null           # float, modeled win / modeled loss
+
+# --- Sizing (computed in code, before any model sees it) -------------------
+sizing:
+  account_risk_pct_per_trade: null      # float, fraction of equity
+  max_contracts_per_trade: null         # int -- hard cap, always wins
+  max_premium_per_trade: null           # float, dollars
+  max_premium_pct_of_equity: null       # float
+  min_contracts: null                   # int -- below this, no trade
+  round_direction: "REPLACE_ME"         # "down" -- never round size up
+
+# --- Hard caps applied AFTER the model. Caps always win. -------------------
+caps:
+  max_concurrent_positions: null        # int
+  max_positions_per_symbol: null        # int
+  max_open_premium: null                # float, dollars across book
+  max_open_premium_pct_of_equity: null  # float
+  max_entries_per_session: null         # int
+  max_entries_per_symbol_per_session: null  # int
+  min_minutes_between_entries: null     # int
+
+# --- Kill switches. Fully deterministic; never consult a model. ------------
+killswitch:
+  daily_loss_halt_pct: null             # float, fraction of start-of-day equity
+  daily_loss_halt_abs: null             # float, dollars
+  consecutive_losing_trades: null       # int
+  broker_error_streak: null             # int
+  max_session_drawdown_pct: null        # float, from intraday equity peak
+  halt_resets_next_session: true        # bool
+
+# --- Deterministic exits. Always armed, independent of Agent 5. ------------
+exits:
+  stop_pct: null                        # float, negative, % of entry premium
+  target_pct: null                      # float, positive
+  trail_activate_pct: null              # float, positive
+  trail_giveback_pct: null              # float, positive
+  scale_out_fraction: null              # float, 0.0-1.0
+  max_hold_minutes: null                # int
+  poll_interval_seconds: null           # int -- spreads have no broker stop
+  vertical_exit_poll_seconds: null      # int -- closing mleg loop cadence
+
+# --- Agent runtime, shared by the generic runner ---------------------------
+agent_runtime:
+  model: "REPLACE_ME"                   # Anthropic model id
+  max_output_tokens: null               # int
+  temperature: null                     # float
+  timeout_seconds: null                 # float -- timeout on entry path = skip
+  max_validation_retries: null          # int -- one retry, then fail closed
+  log_full_response: true               # bool -- decision log completeness
+
+# --- Per-agent thresholds --------------------------------------------------
+agents:
+
+  # Agent 1 -- Regime & Signal Profiler
+  a1:
+    cadence_seconds: null               # int
+    confidence_floor: null              # float, 0.0-1.0; below -> direction none
+    profile_lock_minutes: null          # int -- anti-thrash
+    allowed_ema_fast: []                # list[int] -- clamp target
+    allowed_confirmation_bars: []       # list[int] -- clamp target
+    min_atr_multiple_floor: null        # float
+    min_atr_multiple_ceiling: null      # float
+    force_none_regimes: []              # list[str] -- must include "choppy"
+
+  # Agent 2 -- Context & Eligibility
+  a2:
+    cadence_seconds: null               # int
+    max_eligible_symbols: null          # int -- truncate by bias_strength
+    min_bias_strength: null             # float, 0.0-1.0
+    blocking_event_risk: []             # list[str] -- must include "high"
+    blocked_iv_assessments: []          # list[str]
+    headline_lookback_hours: null       # int
+
+  # Agent 3 -- Risk Allocator
+  a3:
+    size_multiplier_min: 0.0            # structural floor -- never raise
+    size_multiplier_max: 1.0            # structural ceiling -- never raise
+    veto_below_multiplier: null         # float -- below this, no trade at all
+
+  # Agent 4 -- Contract & Structure Selector
+  a4:
+    max_expected_hold_hours: null       # int
+    allowed_structures: []              # list[str], debit only
+    vertical_min_width: null            # float, strike width in dollars
+    vertical_max_width: null            # float
+    vertical_min_iv_rank: null          # float -- guidance threshold
+    require_same_expiry_legs: true      # bool -- structural, do not disable
+
+  # Agent 5 -- Exit Manager
+  a5:
+    cadence_seconds: null               # int
+    min_stop_tightening_pct: null       # float -- must be strictly tighter
+    max_stop_pct: null                  # float, negative -- absolute floor
+    allow_scale_out: true               # bool
+
+  # Agent 6 -- Nightly Reviewer
+  a6:
+    max_observations: null              # int -- hard cap
+    max_observation_chars: null         # int
+    max_expires_after_sessions: null    # int
+    max_global_scope_observations: null # int
+
+# --- Decision log ----------------------------------------------------------
+decision_log:
+  filename: "REPLACE_ME"                # e.g. "decision_log.jsonl"
+  rotate_daily: true                    # bool
+  redact_env_keys: true                 # bool -- never write secrets

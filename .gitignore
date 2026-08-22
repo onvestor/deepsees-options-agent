@@ -216,3 +216,51 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---------------------------------------------------------------------------
+# DeepSees Options Agent — project rules
+#
+# This repo is private now and becomes PUBLIC before submission. Flipping
+# visibility exposes the entire commit history, not just the current tree.
+# Nothing matched below may ever be staged, in any commit, at any point.
+# ---------------------------------------------------------------------------
+
+# Secrets. `.env` is already covered above; these cover the variants.
+.env.*
+!.env.example
+
+# Tuned thresholds and the symbol universe.
+# NOTE: this MUST be `config/*`, not `config/`. An ignored *directory* is never
+# descended into by git, so a bare `config/` would make the negation below dead
+# and the committed example files unreachable.
+config/*
+!config/*.example.yaml
+
+# Prompt text. No exceptions — nothing under prompts/ is ever committed.
+prompts/
+
+# Decision logs and every other append-only record.
+logs/
+*.jsonl
+
+# Recorded broker responses can carry account ids / order ids. Scrub before
+# adding anything here; these local-only variants are never staged.
+tests/fixtures/**/*.private.json
+tests/fixtures/**/*.local.json
+
+# Local-only overrides of any committed file.
+*.local.yaml
+*.local.yml
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+
+# Claude Code — local session and build artifacts.
+# `.claude/` is ignored wholesale: a build instruction saved as a custom slash
+# command lands in .claude/commands/ and would otherwise be committed.
+.claude/
+CLAUDE.local.md
+*.local.md
+scratch/
+notes/

@@ -1,0 +1,14 @@
+# Core
+alpaca-py>=0.33
+anthropic>=0.40
+pydantic>=2.9,<3
+pandas>=2.2
+numpy>=1.26
+PyYAML>=6.0
+
+# Dashboard (phase 9)
+fastapi>=0.115
+uvicorn[standard]>=0.32
+
+# Test
+pytest>=8.3
