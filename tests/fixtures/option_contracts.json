@@ -1,0 +1,2887 @@
+{
+  "_source": "GET /v2/options/contracts, recorded live from Alpaca paper",
+  "_recorded": "2026-08-22",
+  "_note": "Public contract specifications. No account data. Roots are UNPADDED.",
+  "contracts": [
+    {
+      "symbol": "SPY260824C00500000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "500.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00505000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "505.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00510000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "510.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00515000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "515.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00520000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "520.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00525000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "525.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00530000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "530.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00535000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "535.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00540000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "540.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00545000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "545.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00550000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "550.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00555000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "555.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00560000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "560.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00565000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "565.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00570000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "570.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00575000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "575.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00580000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "580.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00585000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "585.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00590000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "590.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00595000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "595.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00600000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "600.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00605000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "605.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00610000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "610.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00615000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "615.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00620000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "620.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00625000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "625.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00630000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "630.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00635000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "635.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00640000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "640.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00645000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "645.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00650000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "650.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00655000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "655.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00660000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "660.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00665000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "665.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00670000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "670.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00675000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "675.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00680000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "680.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00685000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "685.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00690000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "690.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824C00695000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "695.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00500000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "500.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00505000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "505.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00510000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "510.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00515000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "515.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00520000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "520.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00525000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "525.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00530000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "530.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00535000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "535.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00540000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "540.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00545000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "545.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00550000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "550.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00555000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "555.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00560000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "560.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00565000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "565.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00570000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "570.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00575000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "575.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00580000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "580.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00585000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "585.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00590000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "590.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00595000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "595.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00600000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "600.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00605000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "605.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00610000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "610.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00615000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "615.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00620000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "620.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00625000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "625.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00630000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "630.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00635000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "635.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00640000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "640.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00645000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "645.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00650000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "650.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00655000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "655.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00660000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "660.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00665000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "665.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00670000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "670.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00675000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "675.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00680000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "680.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00685000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "685.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00690000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "690.0",
+      "style": "american"
+    },
+    {
+      "symbol": "SPY260824P00695000",
+      "root_symbol": "SPY",
+      "underlying_symbol": "SPY",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "695.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00110000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "110.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00115000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "115.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00120000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "120.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00125000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "125.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00130000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "130.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00135000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "135.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00140000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "140.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00145000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "145.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00150000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "150.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00152500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "152.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00155000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "155.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00157500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "157.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00160000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "160.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00162500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "162.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00165000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "165.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00167500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "167.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00170000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "170.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00172500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "172.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00175000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "175.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00177500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "177.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00180000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "180.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00182500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "182.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00185000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "185.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00187500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "187.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00190000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "190.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00192500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "192.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00195000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "195.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00197500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "197.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00200000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "200.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00202500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "202.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00205000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "205.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00207500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "207.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00210000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "210.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00212500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "212.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00215000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "215.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00217500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "217.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00220000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "220.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00222500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "222.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00225000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "225.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824C00227500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "227.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00110000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "110.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00115000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "115.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00120000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "120.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00125000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "125.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00130000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "130.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00135000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "135.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00140000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "140.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00145000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "145.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00150000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "150.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00152500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "152.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00155000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "155.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00157500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "157.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00160000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "160.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00162500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "162.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00165000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "165.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00167500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "167.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00170000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "170.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00172500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "172.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00175000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "175.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00177500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "177.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00180000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "180.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00182500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "182.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00185000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "185.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00187500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "187.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00190000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "190.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00192500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "192.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00195000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "195.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00197500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "197.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00200000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "200.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00202500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "202.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00205000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "205.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00207500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "207.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00210000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "210.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00212500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "212.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00215000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "215.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00217500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "217.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00220000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "220.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00222500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "222.5",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00225000",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "225.0",
+      "style": "american"
+    },
+    {
+      "symbol": "NVDA260824P00227500",
+      "root_symbol": "NVDA",
+      "underlying_symbol": "NVDA",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "227.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00205000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "205.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00210000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "210.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00215000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "215.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00220000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "220.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00225000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "225.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00230000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "230.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00235000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "235.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00240000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "240.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00245000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "245.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00250000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "250.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00255000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "255.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00260000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "260.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00265000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "265.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00270000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "270.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00275000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "275.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00277500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "277.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00280000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "280.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00282500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "282.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00285000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "285.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00287500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "287.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00290000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "290.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00292500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "292.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00295000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "295.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00297500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "297.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00300000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "300.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00302500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "302.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00305000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "305.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00307500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "307.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00310000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "310.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00312500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "312.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00315000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "315.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00317500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "317.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00320000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "320.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00322500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "322.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00325000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "325.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00327500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "327.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00330000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "330.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00332500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "332.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00335000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "335.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824C00337500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "337.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00205000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "205.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00210000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "210.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00215000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "215.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00220000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "220.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00225000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "225.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00230000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "230.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00235000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "235.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00240000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "240.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00245000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "245.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00250000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "250.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00255000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "255.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00260000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "260.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00265000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "265.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00270000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "270.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00275000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "275.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00277500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "277.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00280000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "280.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00282500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "282.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00285000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "285.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00287500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "287.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00290000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "290.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00292500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "292.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00295000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "295.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00297500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "297.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00300000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "300.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00302500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "302.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00305000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "305.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00307500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "307.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00310000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "310.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00312500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "312.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00315000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "315.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00317500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "317.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00320000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "320.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00322500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "322.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00325000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "325.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00327500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "327.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00330000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "330.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00332500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "332.5",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00335000",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "335.0",
+      "style": "american"
+    },
+    {
+      "symbol": "AAPL260824P00337500",
+      "root_symbol": "AAPL",
+      "underlying_symbol": "AAPL",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "337.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00400000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "400.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00405000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "405.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00410000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "410.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00415000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "415.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00420000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "420.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00425000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "425.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00430000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "430.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00435000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "435.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00440000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "440.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00445000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "445.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00450000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "450.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00460000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "460.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00465000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "465.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00470000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "470.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00475000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "475.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00480000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "480.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00485000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "485.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00490000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "490.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00495000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "495.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00497500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "497.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00500000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "500.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00502500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "502.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00505000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "505.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00507500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "507.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00510000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "510.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00512500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "512.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00515000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "515.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00517500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "517.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00520000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "520.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00522500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "522.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00525000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "525.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00527500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "527.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00530000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "530.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00532500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "532.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00535000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "535.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00537500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "537.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00540000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "540.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00542500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "542.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00545000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "545.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824C00547500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "call",
+      "strike_price": "547.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00400000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "400.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00405000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "405.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00410000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "410.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00415000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "415.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00420000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "420.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00425000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "425.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00430000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "430.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00435000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "435.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00440000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "440.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00445000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "445.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00450000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "450.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00460000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "460.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00465000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "465.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00470000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "470.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00475000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "475.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00480000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "480.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00485000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "485.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00490000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "490.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00495000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "495.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00497500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "497.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00500000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "500.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00502500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "502.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00505000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "505.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00507500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "507.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00510000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "510.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00512500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "512.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00515000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "515.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00517500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "517.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00520000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "520.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00522500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "522.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00525000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "525.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00527500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "527.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00530000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "530.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00532500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "532.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00535000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "535.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00537500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "537.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00540000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "540.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00542500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "542.5",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00545000",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "545.0",
+      "style": "american"
+    },
+    {
+      "symbol": "META260824P00547500",
+      "root_symbol": "META",
+      "underlying_symbol": "META",
+      "expiration_date": "2026-08-24",
+      "type": "put",
+      "strike_price": "547.5",
+      "style": "american"
+    }
+  ]
+}

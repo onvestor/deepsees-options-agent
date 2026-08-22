@@ -160,6 +160,18 @@ agents:
     max_expires_after_sessions: null    # int
     max_global_scope_observations: null # int
 
+# --- Step 1 broker round-trip spike ----------------------------------------
+# Temporary. Delete this section once the real order builder lands at Step 4;
+# it exists so the de-risking spike has no inline literals either.
+roundtrip:
+  option_type: "REPLACE_ME"             # "call" or "put"
+  qty: null                             # int, whole contracts
+  target_delta: null                    # float, absolute
+  entry_limit_pad_pct: null             # float, fraction above ask on entry
+  exit_limit_pad_pct: null              # float, fraction below bid on exit
+  fill_timeout_seconds: null            # int, then cancel and report
+  strike_window_pct: null               # float, +/- around spot for the query
+
 # --- Decision log ----------------------------------------------------------
 decision_log:
   filename: "REPLACE_ME"                # e.g. "decision_log.jsonl"

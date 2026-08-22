@@ -39,6 +39,7 @@ from typing import Any, Iterator, Mapping
 import yaml
 
 __all__ = [
+    "AlpacaCredentials",
     "ConfigError",
     "Config",
     "Env",
@@ -102,52 +103,117 @@ def _parse_env_file(path: Path) -> dict[str, str]:
 
 
 @dataclass(frozen=True)
-class Env:
-    """Secrets and endpoints. Never rendered into logs or the decision log."""
+class AlpacaCredentials:
+    """Everything needed to talk to Alpaca, proven present."""
 
-    alpaca_api_key: str
-    alpaca_secret_key: str
-    alpaca_base_url: str
-    anthropic_api_key: str
+    api_key: str
+    secret_key: str
+    base_url: str
+    data_url: str | None
 
     @property
     def is_paper(self) -> bool:
-        """True when pointed at Alpaca paper. Guards live-account mistakes."""
-        return "paper-api" in self.alpaca_base_url
+        return "paper-api" in self.base_url
 
     def __repr__(self) -> str:
-        return f"Env(alpaca_base_url={self.alpaca_base_url!r}, secrets=<redacted>)"
+        return f"AlpacaCredentials(base_url={self.base_url!r}, secrets=<redacted>)"
 
 
-_REQUIRED_ENV = (
-    "ALPACA_API_KEY",
-    "ALPACA_SECRET_KEY",
-    "ALPACA_BASE_URL",
-    "ANTHROPIC_API_KEY",
-)
+_TRUTHY = frozenset({"1", "true", "yes", "on"})
+
+
+@dataclass(frozen=True)
+class Env:
+    """Credentials and endpoints. Never rendered into logs or the decision log.
+
+    Validation is **per consumer**, not eager. Loading config must not demand
+    an Anthropic key to run the broker round trip, nor Alpaca keys to run a
+    nightly review over an existing decision log. Each subsystem calls the
+    ``require_*`` accessor for what it actually needs, and the error names only
+    the variables that subsystem is missing.
+
+    Feeds are deliberately absent: ``broker.data_feed_options`` and
+    ``broker.data_feed_equities`` live in limits.yaml, which is the single
+    source for anything that changes behaviour. ``.env`` holds credentials and
+    endpoints only.
+    """
+
+    alpaca_api_key: str | None
+    alpaca_secret_key: str | None
+    alpaca_base_url: str | None
+    alpaca_data_url: str | None
+    anthropic_api_key: str | None
+    mock: bool
+
+    @property
+    def is_paper(self) -> bool:
+        """True only when demonstrably pointed at paper. Unset fails closed."""
+        return bool(self.alpaca_base_url) and "paper-api" in self.alpaca_base_url
+
+    def require_alpaca(self) -> AlpacaCredentials:
+        """Credentials for any broker or market-data call."""
+        missing = [
+            name
+            for name, value in (
+                ("ALPACA_API_KEY", self.alpaca_api_key),
+                ("ALPACA_SECRET_KEY", self.alpaca_secret_key),
+                ("ALPACA_BASE_URL", self.alpaca_base_url),
+            )
+            if not value
+        ]
+        if missing:
+            raise ConfigError(
+                "broker access needs " + ", ".join(missing) + " -- set them in .env "
+                "(see .env.example)"
+            )
+        return AlpacaCredentials(
+            api_key=self.alpaca_api_key,  # type: ignore[arg-type]
+            secret_key=self.alpaca_secret_key,  # type: ignore[arg-type]
+            base_url=self.alpaca_base_url,  # type: ignore[arg-type]
+            data_url=self.alpaca_data_url,
+        )
+
+    def require_anthropic(self) -> str:
+        """Key for a model call. Demanded only when an agent is invoked."""
+        if not self.anthropic_api_key:
+            raise ConfigError(
+                "agent calls need ANTHROPIC_API_KEY -- set it in .env (see .env.example). "
+                "Broker-only workflows do not require it."
+            )
+        return self.anthropic_api_key
+
+    def __repr__(self) -> str:
+        return (
+            f"Env(alpaca_base_url={self.alpaca_base_url!r}, "
+            f"alpaca_data_url={self.alpaca_data_url!r}, mock={self.mock}, "
+            f"alpaca_keys={'set' if self.alpaca_api_key else 'unset'}, "
+            f"anthropic_key={'set' if self.anthropic_api_key else 'unset'}, "
+            "secrets=<redacted>)"
+        )
 
 
 def _load_env(repo_root: Path) -> Env:
-    """Real process environment wins over ``.env`` so hosted overrides work."""
+    """Read ``.env`` and the environment. Validates nothing -- see ``require_*``.
+
+    Real process environment wins over ``.env`` so hosted overrides work.
+    """
     from_file = _parse_env_file(repo_root / _ENV_FILE)
 
-    def read(key: str) -> str:
-        return (os.environ.get(key) or from_file.get(key) or "").strip()
+    def read(key: str) -> str | None:
+        value = (os.environ.get(key) or from_file.get(key) or "").strip()
+        return value or None
 
-    missing = [key for key in _REQUIRED_ENV if not read(key)]
-    if missing:
-        raise ConfigError(
-            "missing environment variables: "
-            + ", ".join(missing)
-            + f" -- set them in {repo_root / _ENV_FILE} or the environment "
-            "(see .env.example)"
-        )
+    base_url = read("ALPACA_BASE_URL")
+    data_url = read("ALPACA_DATA_URL")
+    mock = (read("ALPACA_MOCK") or "").lower() in _TRUTHY
 
     return Env(
         alpaca_api_key=read("ALPACA_API_KEY"),
         alpaca_secret_key=read("ALPACA_SECRET_KEY"),
-        alpaca_base_url=read("ALPACA_BASE_URL").rstrip("/"),
+        alpaca_base_url=base_url.rstrip("/") if base_url else None,
+        alpaca_data_url=data_url.rstrip("/") if data_url else None,
         anthropic_api_key=read("ANTHROPIC_API_KEY"),
+        mock=mock,
     )
 
 
