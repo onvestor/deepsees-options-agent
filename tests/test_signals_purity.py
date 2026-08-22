@@ -16,6 +16,9 @@ from pathlib import Path
 import pytest
 
 SIGNALS_DIR = Path(__file__).parent.parent / "src" / "signals"
+# CLAUDE.md: "src/signals/ and src/options/metrics.py are pure and must have
+# direct unit tests." metrics.py is held to the same standard and checked here.
+EXTRA_PURE = (Path(__file__).parent.parent / "src" / "options" / "metrics.py",)
 
 # Anything that can reach the network, the filesystem, the clock, or a
 # subprocess. `datetime` is absent deliberately -- reading the wall clock
@@ -33,7 +36,9 @@ FORBIDDEN_CALLS = frozenset({"open", "print", "input", "eval", "exec", "compile"
 
 
 def signal_modules() -> list[Path]:
-    return sorted(p for p in SIGNALS_DIR.glob("*.py") if p.name != "__init__.py")
+    modules = [p for p in SIGNALS_DIR.glob("*.py") if p.name != "__init__.py"]
+    modules.extend(p for p in EXTRA_PURE if p.exists())
+    return sorted(modules)
 
 
 def test_there_are_signal_modules_to_check():
@@ -78,10 +83,11 @@ def test_only_depends_on_the_numeric_stack(module: Path):
         for node in ast.walk(tree)
         if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("src.")
     ]
+    allowed = ("src.signals", "src.options.metrics")
     for name in internal:
-        assert name.startswith("src.signals"), (
-            f"{module.name} imports {name}; src/signals may only import from itself "
-            "(config is passed in as a value, never read here)"
+        assert name.startswith(allowed), (
+            f"{module.name} imports {name}; pure modules may only import from "
+            f"{allowed} (config is passed in as a value, never read here)"
         )
 
 

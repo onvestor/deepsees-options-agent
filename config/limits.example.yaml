@@ -52,6 +52,10 @@ prefilter:
   max_spread_pct_of_mid: null           # float, e.g. 0.05 == 5%
   max_spread_abs: null                  # float, dollars per contract
   min_bid: null                         # float, dollars
+  strike_window_pct: null               # float, +/- around spot. NARROWS the
+                                        #   universe BEFORE snapshots are
+                                        #   requested; greeks coverage is poor
+                                        #   in the wings and unusable anyway
   max_survivors_per_symbol: null        # int, cap handed to Agent 4
   exclude_days_before_earnings: null    # int -- filtered in code, pre-model
 
@@ -67,6 +71,10 @@ signals:
 
 # --- Computed metrics: acceptance bands ------------------------------------
 metrics:
+  realized_vol_window_days: null        # int, sessions for close-to-close RV
+  modeled_hold_hours: null              # float, hold assumed by modeled P&L
+  theta_day_hours: null                 # float, hours per theta-day (24 =
+                                        #   calendar basis, as Alpaca quotes it)
   max_theta_pct_per_day: null           # float, theta / premium
   min_gamma: null                       # float
   max_iv_vs_rv_ratio: null              # float
@@ -192,5 +200,10 @@ decision_log:
   rotate_daily: true                    # bool -- one file per session date
   redact_env_keys: true                 # bool -- structural, never set false
   fsync_every_record: false             # bool -- durability vs write latency
-  prefilter_detail: "REPLACE_ME"        # "aggregate" or "full" (per-contract)
+  prefilter_detail: "REPLACE_ME"        # "aggregate" | "boundary" | "full".
+                                        #   "boundary" keeps per-contract rows
+                                        #   only for the ranked set and
+                                        #   near-threshold rejects
+  near_boundary_pct: null               # float, how close a single-reason
+                                        #   reject must be to count as boundary
   max_response_chars: null              # int -- truncate a runaway model reply

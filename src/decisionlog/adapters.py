@@ -72,16 +72,29 @@ def prefilter_payload(
     candidates: Iterable[Any],
     thresholds: Mapping[str, float],
     underlying_price: float | None = None,
-    detail: str = "full",
+    detail: str = "boundary",
+    near_boundary_pct: float = 0.20,
+    keep_symbols: Iterable[str] = (),
 ) -> PrefilterPayload:
     """Multi-label prefilter outcome from a list of evaluated candidates.
 
-    ``detail='full'`` records each rejected contract's failing reasons, which
-    is what lets a later question -- "would a 5% spread cap have kept this
-    one?" -- be answered from the log instead of by rerunning the scan against
-    a market that no longer exists.
+    ``detail`` controls how much per-contract evidence is retained, because
+    the aggregate is cheap and the per-contract rows are not -- a full scan is
+    hundreds of contracts, several times a session, across the universe.
+
+    * ``"aggregate"`` -- counts only.
+    * ``"boundary"``  -- counts, plus per-contract rows for the ranked set and
+      for **single-reason rejects that came within ``near_boundary_pct`` of
+      passing**. Those are the only rejects a threshold change would move; a
+      contract that failed on four counts tells you nothing about where to put
+      a cap. This is the default.
+    * ``"full"``      -- every rejected contract. Diagnostic use.
+
+    Reason counts and ``sole_reason`` are always complete regardless of detail,
+    so the aggregate view never depends on the retention setting.
     """
     candidates = list(candidates)
+    keep = {s.upper() for s in keep_symbols}
     reason_counts: dict[str, int] = {}
     sole_reason: dict[str, int] = {}
     rejections: dict[str, list[str]] = {}
@@ -89,15 +102,23 @@ def prefilter_payload(
 
     for candidate in candidates:
         failures = list(getattr(candidate, "failures", ()) or ())
+        symbol = candidate.symbol
         if not failures:
-            survivors.append(candidate.symbol)
+            survivors.append(symbol)
             continue
+
         for reason in failures:
             reason_counts[reason] = reason_counts.get(reason, 0) + 1
         if len(failures) == 1:
             sole_reason[failures[0]] = sole_reason.get(failures[0], 0) + 1
+
         if detail == "full":
-            rejections[candidate.symbol] = failures
+            rejections[symbol] = failures
+        elif detail == "boundary":
+            distance = getattr(candidate, "boundary_distance", None)
+            near = len(failures) == 1 and distance is not None and distance <= near_boundary_pct
+            if near or symbol.upper() in keep:
+                rejections[symbol] = failures
 
     return PrefilterPayload(
         underlying_price=underlying_price,

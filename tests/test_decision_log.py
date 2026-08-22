@@ -297,7 +297,7 @@ def test_prefilter_multi_label_survives_the_round_trip(logger):
         Candidate("C", []),
     ]
     logger.write(
-        prefilter_payload(candidates, thresholds={"max_spread_pct_of_mid": 0.06}),
+        prefilter_payload(candidates, thresholds={"max_spread_pct_of_mid": 0.06}, detail="full"),
         action="prefilter_complete", symbol="SPY",
     )
     payload = read_records(logger.path, strict=True)[0]["payload"]
@@ -307,6 +307,25 @@ def test_prefilter_multi_label_survives_the_round_trip(logger):
     assert payload["sole_reason"] == {"spread": 1}
     assert payload["rejections"]["A"] == ["spread", "open interest"]
     assert sum(payload["reason_counts"].values()) > payload["rejected"]
+
+
+def test_aggregate_counts_are_complete_at_every_detail_level(logger):
+    """Retention controls per-contract rows only. The counts a dashboard reads
+    must never depend on how much evidence was kept."""
+    candidates = [
+        Candidate("A", ["spread", "open interest"]),
+        Candidate("B", ["spread"]),
+        Candidate("C", []),
+    ]
+    payloads = {
+        detail: prefilter_payload(candidates, thresholds={}, detail=detail)
+        for detail in ("aggregate", "boundary", "full")
+    }
+    for payload in payloads.values():
+        assert payload.reason_counts == {"spread": 2, "open interest": 1}
+        assert payload.rejected == 2
+        assert payload.survivors == 1
+    assert len(payloads["full"].rejections) > len(payloads["aggregate"].rejections)
 
 
 def test_prefilter_aggregate_detail_omits_per_contract_rows():
