@@ -97,6 +97,9 @@ sizing:
   max_premium_pct_of_equity: null       # float
   min_contracts: null                   # int -- below this, no trade
   round_direction: "REPLACE_ME"         # "down" -- never round size up
+  assume_stop_gapped: true              # bool -- size assuming the overnight
+                                        #   gap can blow through the stop.
+                                        #   Structural for a swing hold.
 
 # --- Hard caps applied AFTER the model. Caps always win. -------------------
 caps:
