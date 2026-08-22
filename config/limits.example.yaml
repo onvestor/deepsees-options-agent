@@ -24,8 +24,10 @@ session:
 
 # --- Two-tier cache (see CLAUDE.md: never a single 60s cache) --------------
 cache:
-  contracts_ttl_seconds: null           # int, contract universe layer
-  quotes_ttl_seconds: null              # int, snapshot quotes + greeks layer
+  contracts_ttl_seconds: null           # int, contract universe layer (~15 min)
+  quotes_ttl_seconds: null              # int, quotes + greeks layer (5-10s)
+  contracts_max_entries: null           # int, LRU bound on the universe tier
+  quotes_max_entries: null              # int, LRU bound on the per-symbol tier
 
 # --- Broker behaviour ------------------------------------------------------
 broker:
@@ -35,6 +37,8 @@ broker:
   retry_attempts: null                  # int -- then halt new entries
   backoff_base_seconds: null            # float, exponential base
   contracts_page_limit: null            # int, <= 100 per Alpaca default
+  max_contract_pages: null              # int, runaway-pagination backstop
+  snapshot_batch_size: null             # int, symbols per snapshot request
   require_paper_base_url: true          # bool -- refuse to arm against live
 
 # --- Deterministic chain prefilter (runs BEFORE any model call) ------------

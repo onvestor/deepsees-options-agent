@@ -1,0 +1,2444 @@
+{
+  "_source": "option snapshots endpoint, feed=indicative, recorded live from Alpaca paper",
+  "_recorded": "2026-08-22",
+  "_account": "dev",
+  "_note": "Public market data. Greeks are absent on a real fraction of contracts -- that is the point of this fixture.",
+  "snapshots": [
+    {
+      "symbol": "SPY260824C00700000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 62.52,
+        "ask_price": 66.81,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.146938+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 65.33,
+        "timestamp": "2026-08-21T20:10:57.068603+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00701000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 62.62,
+        "ask_price": 67.11,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.740172+00:00"
+      },
+      "greeks": {
+        "delta": 0.9992,
+        "gamma": 0.0001,
+        "theta": -0.0847,
+        "vega": 0.0015,
+        "rho": 0.0384
+      },
+      "implied_volatility": 0.38,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00702000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 61.92,
+        "ask_price": 64.9,
+        "bid_size": 1.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.396328+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00703000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 61.84,
+        "ask_price": 65.019,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.146933+00:00"
+      },
+      "greeks": {
+        "delta": 0.9626,
+        "gamma": 0.0022,
+        "theta": -0.8296,
+        "vega": 0.0463,
+        "rho": 0.0369
+      },
+      "implied_volatility": 0.6587,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00704000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 59.06,
+        "ask_price": 62.76,
+        "bid_size": 2.0,
+        "ask_size": 10.0,
+        "timestamp": "2026-08-21T19:59:59.287137+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 61.98,
+        "timestamp": "2026-08-21T19:16:24.656545+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00705000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 58.17,
+        "ask_price": 62.49,
+        "bid_size": 4.0,
+        "ask_size": 10.0,
+        "timestamp": "2026-08-21T19:59:59.796718+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 61.73,
+        "timestamp": "2026-08-20T13:32:26.211464+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00706000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 57.23,
+        "ask_price": 60.44,
+        "bid_size": 10.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.404417+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00707000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 57.97,
+        "ask_price": 59.42,
+        "bid_size": 10.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.254761+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00708000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 55.61,
+        "ask_price": 58.5,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.146969+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 68.76,
+        "timestamp": "2026-08-14T19:30:01.138171+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00709000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 55.01,
+        "ask_price": 58.84,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309987+00:00"
+      },
+      "greeks": {
+        "delta": 0.9923,
+        "gamma": 0.0009,
+        "theta": -0.2006,
+        "vega": 0.012,
+        "rho": 0.0385
+      },
+      "implied_volatility": 0.4332,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00710000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 54.2,
+        "ask_price": 56.06,
+        "bid_size": 1.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.200121+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 53.86,
+        "timestamp": "2026-08-20T18:57:26.600088+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00711000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 53.68,
+        "ask_price": 55.98,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309602+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 60.74,
+        "timestamp": "2026-08-17T19:59:17.933046+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00712000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 53.2,
+        "ask_price": 54.57,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309832+00:00"
+      },
+      "greeks": {
+        "delta": 0.9965,
+        "gamma": 0.0005,
+        "theta": -0.1257,
+        "vega": 0.006,
+        "rho": 0.0389
+      },
+      "implied_volatility": 0.3672,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00713000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 52.07,
+        "ask_price": 54.89,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.146938+00:00"
+      },
+      "greeks": {
+        "delta": 0.9549,
+        "gamma": 0.0029,
+        "theta": -0.8455,
+        "vega": 0.0538,
+        "rho": 0.0371
+      },
+      "implied_volatility": 0.5777,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00714000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 49.93,
+        "ask_price": 52.97,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.310052+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 61.54,
+        "timestamp": "2026-08-17T14:23:03.417426+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00715000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 49.52,
+        "ask_price": 52.48,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309793+00:00"
+      },
+      "greeks": {
+        "delta": 0.9845,
+        "gamma": 0.0016,
+        "theta": -0.3094,
+        "vega": 0.0221,
+        "rho": 0.0385
+      },
+      "implied_volatility": 0.4336,
+      "latest_trade": {
+        "price": 50.93,
+        "timestamp": "2026-08-21T19:16:24.656545+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00716000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 48.68,
+        "ask_price": 51.12,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.146938+00:00"
+      },
+      "greeks": {
+        "delta": 0.9944,
+        "gamma": 0.0008,
+        "theta": -0.1526,
+        "vega": 0.009,
+        "rho": 0.039
+      },
+      "implied_volatility": 0.3603,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00717000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 46.65,
+        "ask_price": 49.78,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309824+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00718000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 45.31,
+        "ask_price": 48.1,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309746+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 49.48,
+        "timestamp": "2026-08-20T15:07:05.539439+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00719000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 44.6,
+        "ask_price": 47.76,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309786+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00720000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 44.62,
+        "ask_price": 47.39,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309741+00:00"
+      },
+      "greeks": {
+        "delta": 0.9828,
+        "gamma": 0.0019,
+        "theta": -0.3103,
+        "vega": 0.0241,
+        "rho": 0.0387
+      },
+      "implied_volatility": 0.3972,
+      "latest_trade": {
+        "price": 46.12,
+        "timestamp": "2026-08-21T19:11:55.015384+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00721000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 42.26,
+        "ask_price": 46.41,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309902+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 52.86,
+        "timestamp": "2026-08-12T16:32:18.724865+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00722000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 42.11,
+        "ask_price": 44.67,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.142464+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 43.83,
+        "timestamp": "2026-08-21T18:52:58.314536+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00723000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 41.92,
+        "ask_price": 43.64,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.142488+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 50.93,
+        "timestamp": "2026-08-17T18:05:06.251005+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00724000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 40.31,
+        "ask_price": 43.68,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309827+00:00"
+      },
+      "greeks": {
+        "delta": 0.9826,
+        "gamma": 0.0021,
+        "theta": -0.2918,
+        "vega": 0.0244,
+        "rho": 0.0389
+      },
+      "implied_volatility": 0.3622,
+      "latest_trade": {
+        "price": 43.25,
+        "timestamp": "2026-08-20T15:07:05.539439+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00725000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 39.97,
+        "ask_price": 41.63,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.310033+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 38.73,
+        "timestamp": "2026-08-20T19:00:03.033945+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00726000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 37.81,
+        "ask_price": 41.15,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.310042+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 39.64,
+        "timestamp": "2026-08-21T18:02:40.359941+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00727000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 37.22,
+        "ask_price": 39.14,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.141055+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 38.65,
+        "timestamp": "2026-08-21T18:02:40.359941+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00728000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 36.16,
+        "ask_price": 38.22,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.141119+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00729000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 35.25,
+        "ask_price": 38.03,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309786+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00730000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 34.61,
+        "ask_price": 37.41,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309657+00:00"
+      },
+      "greeks": {
+        "delta": 0.9788,
+        "gamma": 0.0028,
+        "theta": -0.3029,
+        "vega": 0.0288,
+        "rho": 0.0391
+      },
+      "implied_volatility": 0.3212,
+      "latest_trade": {
+        "price": 36.12,
+        "timestamp": "2026-08-21T19:33:46.839253+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00731000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 32.9,
+        "ask_price": 36.24,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309641+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00732000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 32.009,
+        "ask_price": 34.91,
+        "bid_size": 10.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.987472+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00733000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 31.63,
+        "ask_price": 34.23,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309807+00:00"
+      },
+      "greeks": {
+        "delta": 0.9879,
+        "gamma": 0.0021,
+        "theta": -0.1904,
+        "vega": 0.0179,
+        "rho": 0.0396
+      },
+      "implied_volatility": 0.2642,
+      "latest_trade": {
+        "price": 33.82,
+        "timestamp": "2026-08-20T14:34:52.622487+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00734000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 30.55,
+        "ask_price": 32.33,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309804+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": null
+    },
+    {
+      "symbol": "SPY260824C00735000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 29.67,
+        "ask_price": 32.38,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.140949+00:00"
+      },
+      "greeks": {
+        "delta": 0.9745,
+        "gamma": 0.0037,
+        "theta": -0.3126,
+        "vega": 0.0337,
+        "rho": 0.0392
+      },
+      "implied_volatility": 0.2864,
+      "latest_trade": {
+        "price": 31.01,
+        "timestamp": "2026-08-21T16:55:46.574282+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00736000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 27.85,
+        "ask_price": 31.42,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309602+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 29.92,
+        "timestamp": "2026-08-21T18:57:45.971905+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00737000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 26.66,
+        "ask_price": 30.08,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309807+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 29.31,
+        "timestamp": "2026-08-21T19:58:51.304571+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00738000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 25.94,
+        "ask_price": 28.69,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309741+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 28.03,
+        "timestamp": "2026-08-21T15:28:57.582318+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00739000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 24.88,
+        "ask_price": 28.24,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309827+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 26.56,
+        "timestamp": "2026-08-20T17:33:25.457097+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00740000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 24.73,
+        "ask_price": 26.91,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.142613+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 25.45,
+        "timestamp": "2026-08-21T20:11:04.192120+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00741000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 23.63,
+        "ask_price": 26.33,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309804+00:00"
+      },
+      "greeks": {
+        "delta": 0.9767,
+        "gamma": 0.0043,
+        "theta": -0.2477,
+        "vega": 0.0312,
+        "rho": 0.0396
+      },
+      "implied_volatility": 0.225,
+      "latest_trade": {
+        "price": 24.2,
+        "timestamp": "2026-08-20T17:30:00.337748+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00742000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 22.34,
+        "ask_price": 24.82,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.142645+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 24.44,
+        "timestamp": "2026-08-21T19:46:29.922835+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00743000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 21.64,
+        "ask_price": 23.32,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.310047+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 21.86,
+        "timestamp": "2026-08-21T14:04:09.965927+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00744000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 20.48,
+        "ask_price": 23.08,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.142645+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 20.13,
+        "timestamp": "2026-08-20T18:29:05.104973+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00745000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 19.14,
+        "ask_price": 21.68,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.142613+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 21.28,
+        "timestamp": "2026-08-21T17:06:54.020025+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00746000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 18.08,
+        "ask_price": 20.93,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309706+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 20.43,
+        "timestamp": "2026-08-21T16:45:08.651274+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00747000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 16.93,
+        "ask_price": 19.45,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309804+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 19.18,
+        "timestamp": "2026-08-21T19:59:26.209654+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00748000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 16.18,
+        "ask_price": 18.45,
+        "bid_size": 1.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309793+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 17.92,
+        "timestamp": "2026-08-21T17:29:56.659450+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00749000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 15.42,
+        "ask_price": 17.71,
+        "bid_size": 1.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.282581+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 17.15,
+        "timestamp": "2026-08-21T16:55:52.118379+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00750000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 14.19,
+        "ask_price": 16.67,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309726+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 16.04,
+        "timestamp": "2026-08-21T19:15:29.472986+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00751000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 13.19,
+        "ask_price": 15.63,
+        "bid_size": 2.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.309824+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 14.32,
+        "timestamp": "2026-08-21T18:33:50.893010+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00752000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 12.79,
+        "ask_price": 15.0,
+        "bid_size": 35.0,
+        "ask_size": 61.0,
+        "timestamp": "2026-08-21T19:59:59.150827+00:00"
+      },
+      "greeks": {
+        "delta": 0.9885,
+        "gamma": 0.0049,
+        "theta": -0.1208,
+        "vega": 0.0171,
+        "rho": 0.0407
+      },
+      "implied_volatility": 0.1088,
+      "latest_trade": {
+        "price": 14.21,
+        "timestamp": "2026-08-21T18:59:44.498368+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00753000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 12.25,
+        "ask_price": 13.87,
+        "bid_size": 16.0,
+        "ask_size": 27.0,
+        "timestamp": "2026-08-21T19:59:59.609150+00:00"
+      },
+      "greeks": {
+        "delta": 0.9453,
+        "gamma": 0.0136,
+        "theta": -0.2963,
+        "vega": 0.0627,
+        "rho": 0.0389
+      },
+      "implied_volatility": 0.1435,
+      "latest_trade": {
+        "price": 13.65,
+        "timestamp": "2026-08-21T19:50:01.023487+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00754000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 11.02,
+        "ask_price": 12.75,
+        "bid_size": 16.0,
+        "ask_size": 24.0,
+        "timestamp": "2026-08-21T19:59:59.610269+00:00"
+      },
+      "greeks": {
+        "delta": 0.9916,
+        "gamma": 0.0046,
+        "theta": -0.1035,
+        "vega": 0.013,
+        "rho": 0.041
+      },
+      "implied_volatility": 0.0884,
+      "latest_trade": {
+        "price": 12.67,
+        "timestamp": "2026-08-21T19:50:00.927694+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00755000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 10.52,
+        "ask_price": 11.85,
+        "bid_size": 37.0,
+        "ask_size": 37.0,
+        "timestamp": "2026-08-21T19:59:59.151630+00:00"
+      },
+      "greeks": {
+        "delta": 0.9149,
+        "gamma": 0.0194,
+        "theta": -0.3809,
+        "vega": 0.0882,
+        "rho": 0.0378
+      },
+      "implied_volatility": 0.1414,
+      "latest_trade": {
+        "price": 10.6,
+        "timestamp": "2026-08-21T20:04:12.849774+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00756000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 9.65,
+        "ask_price": 10.72,
+        "bid_size": 18.0,
+        "ask_size": 22.0,
+        "timestamp": "2026-08-21T19:59:59.609877+00:00"
+      },
+      "greeks": {
+        "delta": 0.9096,
+        "gamma": 0.0219,
+        "theta": -0.3721,
+        "vega": 0.0923,
+        "rho": 0.0376
+      },
+      "implied_volatility": 0.1314,
+      "latest_trade": {
+        "price": 10.0,
+        "timestamp": "2026-08-21T20:06:05.918493+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00757000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 8.06,
+        "ask_price": 10.0,
+        "bid_size": 16.0,
+        "ask_size": 24.0,
+        "timestamp": "2026-08-21T19:59:59.609065+00:00"
+      },
+      "greeks": {
+        "delta": 0.9375,
+        "gamma": 0.0211,
+        "theta": -0.2502,
+        "vega": 0.0697,
+        "rho": 0.0388
+      },
+      "implied_volatility": 0.1029,
+      "latest_trade": {
+        "price": 8.8,
+        "timestamp": "2026-08-21T20:09:31.546460+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00758000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 7.07,
+        "ask_price": 7.94,
+        "bid_size": 17.0,
+        "ask_size": 42.0,
+        "timestamp": "2026-08-21T19:59:59.988464+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 7.88,
+        "timestamp": "2026-08-21T19:59:58.054168+00:00"
+      }
+    },
+    {
+      "symbol": "SPY260824C00759000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 6.63,
+        "ask_price": 7.44,
+        "bid_size": 51.0,
+        "ask_size": 45.0,
+        "timestamp": "2026-08-21T19:59:59.842623+00:00"
+      },
+      "greeks": {
+        "delta": 0.9246,
+        "gamma": 0.0295,
+        "theta": -0.2412,
+        "vega": 0.0805,
+        "rho": 0.0384
+      },
+      "implied_volatility": 0.0849,
+      "latest_trade": {
+        "price": 6.86,
+        "timestamp": "2026-08-21T20:06:23.217703+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00195000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 18.01,
+        "ask_price": 22.07,
+        "bid_size": 176.0,
+        "ask_size": 178.0,
+        "timestamp": "2026-08-21T19:59:59.975055+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 19.76,
+        "timestamp": "2026-08-21T19:54:22.673084+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00197500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 14.52,
+        "ask_price": 18.93,
+        "bid_size": 225.0,
+        "ask_size": 117.0,
+        "timestamp": "2026-08-21T19:59:59.970780+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 17.28,
+        "timestamp": "2026-08-21T19:53:11.405145+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00200000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 14.12,
+        "ask_price": 16.43,
+        "bid_size": 113.0,
+        "ask_size": 130.0,
+        "timestamp": "2026-08-21T19:59:59.970780+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 15.01,
+        "timestamp": "2026-08-21T19:54:15.751030+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00202500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 12.05,
+        "ask_price": 14.01,
+        "bid_size": 81.0,
+        "ask_size": 153.0,
+        "timestamp": "2026-08-21T19:59:59.433894+00:00"
+      },
+      "greeks": {
+        "delta": 0.9637,
+        "gamma": 0.0106,
+        "theta": -0.1685,
+        "vega": 0.0127,
+        "rho": 0.0107
+      },
+      "implied_volatility": 0.4699,
+      "latest_trade": {
+        "price": 12.58,
+        "timestamp": "2026-08-21T19:53:26.877978+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00205000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 9.64,
+        "ask_price": 10.07,
+        "bid_size": 45.0,
+        "ask_size": 74.0,
+        "timestamp": "2026-08-21T19:59:59.734962+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 9.9,
+        "timestamp": "2026-08-21T19:59:32.549139+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00207500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 7.24,
+        "ask_price": 7.61,
+        "bid_size": 51.0,
+        "ask_size": 58.0,
+        "timestamp": "2026-08-21T19:59:59.970780+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 7.56,
+        "timestamp": "2026-08-21T19:58:44.483593+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00210000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 5.14,
+        "ask_price": 6.05,
+        "bid_size": 39.0,
+        "ask_size": 37.0,
+        "timestamp": "2026-08-21T19:59:59.361136+00:00"
+      },
+      "greeks": {
+        "delta": 0.9102,
+        "gamma": 0.0393,
+        "theta": -0.1862,
+        "vega": 0.0259,
+        "rho": 0.0104
+      },
+      "implied_volatility": 0.2585,
+      "latest_trade": {
+        "price": 5.19,
+        "timestamp": "2026-08-21T19:59:59.360029+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00212500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 2.99,
+        "ask_price": 3.35,
+        "bid_size": 22.0,
+        "ask_size": 10.0,
+        "timestamp": "2026-08-21T19:59:59.776121+00:00"
+      },
+      "greeks": {
+        "delta": 0.8417,
+        "gamma": 0.0817,
+        "theta": -0.1966,
+        "vega": 0.0385,
+        "rho": 0.0098
+      },
+      "implied_volatility": 0.1856,
+      "latest_trade": {
+        "price": 3.06,
+        "timestamp": "2026-08-21T19:59:53.687355+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00215000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 1.62,
+        "ask_price": 1.63,
+        "bid_size": 42.0,
+        "ask_size": 4.0,
+        "timestamp": "2026-08-21T19:59:59.534339+00:00"
+      },
+      "greeks": {
+        "delta": 0.5511,
+        "gamma": 0.1124,
+        "theta": -0.36,
+        "vega": 0.0631,
+        "rho": 0.0064
+      },
+      "implied_volatility": 0.2209,
+      "latest_trade": {
+        "price": 1.63,
+        "timestamp": "2026-08-21T19:59:59.979075+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00217500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 0.72,
+        "ask_price": 0.75,
+        "bid_size": 92.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.393944+00:00"
+      },
+      "greeks": {
+        "delta": 0.3006,
+        "gamma": 0.0895,
+        "theta": -0.3446,
+        "vega": 0.0555,
+        "rho": 0.0035
+      },
+      "implied_volatility": 0.2438,
+      "latest_trade": {
+        "price": 0.72,
+        "timestamp": "2026-08-21T19:59:59.346444+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00220000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 0.26,
+        "ask_price": 0.27,
+        "bid_size": 5.0,
+        "ask_size": 87.0,
+        "timestamp": "2026-08-21T19:59:59.398615+00:00"
+      },
+      "greeks": {
+        "delta": 0.1321,
+        "gamma": 0.0532,
+        "theta": -0.2179,
+        "vega": 0.0341,
+        "rho": 0.0015
+      },
+      "implied_volatility": 0.2523,
+      "latest_trade": {
+        "price": 0.27,
+        "timestamp": "2026-08-21T19:59:59.870024+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00222500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 0.14,
+        "ask_price": 0.15,
+        "bid_size": 173.0,
+        "ask_size": 303.0,
+        "timestamp": "2026-08-21T19:59:59.756614+00:00"
+      },
+      "greeks": {
+        "delta": 0.0704,
+        "gamma": 0.0287,
+        "theta": -0.1597,
+        "vega": 0.0215,
+        "rho": 0.0008
+      },
+      "implied_volatility": 0.2943,
+      "latest_trade": {
+        "price": 0.14,
+        "timestamp": "2026-08-21T19:59:59.745718+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00225000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 0.08,
+        "ask_price": 0.09,
+        "bid_size": 500.0,
+        "ask_size": 166.0,
+        "timestamp": "2026-08-21T19:59:59.392118+00:00"
+      },
+      "greeks": {
+        "delta": 0.04,
+        "gamma": 0.0162,
+        "theta": -0.1153,
+        "vega": 0.0137,
+        "rho": 0.0005
+      },
+      "implied_volatility": 0.3333,
+      "latest_trade": {
+        "price": 0.08,
+        "timestamp": "2026-08-21T19:59:59.624811+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00227500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 0.01,
+        "ask_price": 0.06,
+        "bid_size": 188.0,
+        "ask_size": 4.0,
+        "timestamp": "2026-08-21T19:59:59.390912+00:00"
+      },
+      "greeks": {
+        "delta": 0.0176,
+        "gamma": 0.0078,
+        "theta": -0.0606,
+        "vega": 0.0069,
+        "rho": 0.0002
+      },
+      "implied_volatility": 0.3478,
+      "latest_trade": {
+        "price": 0.04,
+        "timestamp": "2026-08-21T19:59:46.273933+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00230000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 0.04,
+        "ask_price": 0.05,
+        "bid_size": 185.0,
+        "ask_size": 1.0,
+        "timestamp": "2026-08-21T19:59:59.413455+00:00"
+      },
+      "greeks": {
+        "delta": 0.0186,
+        "gamma": 0.0068,
+        "theta": -0.0769,
+        "vega": 0.0073,
+        "rho": 0.0002
+      },
+      "implied_volatility": 0.4214,
+      "latest_trade": {
+        "price": 0.04,
+        "timestamp": "2026-08-21T19:59:39.829047+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00232500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 0.01,
+        "ask_price": 0.02,
+        "bid_size": 193.0,
+        "ask_size": 118.0,
+        "timestamp": "2026-08-21T19:59:59.380397+00:00"
+      },
+      "greeks": {
+        "delta": 0.007,
+        "gamma": 0.0029,
+        "theta": -0.0324,
+        "vega": 0.0031,
+        "rho": 0.0001
+      },
+      "implied_volatility": 0.4166,
+      "latest_trade": {
+        "price": 0.02,
+        "timestamp": "2026-08-21T19:59:57.512231+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260824C00235000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 0.04,
+        "ask_price": 0.05,
+        "bid_size": 5.0,
+        "ask_size": 175.0,
+        "timestamp": "2026-08-21T19:59:59.969878+00:00"
+      },
+      "greeks": {
+        "delta": 0.015,
+        "gamma": 0.0044,
+        "theta": -0.0814,
+        "vega": 0.006,
+        "rho": 0.0002
+      },
+      "implied_volatility": 0.5367,
+      "latest_trade": {
+        "price": 0.04,
+        "timestamp": "2026-08-21T19:59:26.942447+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00195000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 20.22,
+        "ask_price": 20.7,
+        "bid_size": 11.0,
+        "ask_size": 12.0,
+        "timestamp": "2026-08-21T19:59:59.423254+00:00"
+      },
+      "greeks": null,
+      "implied_volatility": null,
+      "latest_trade": {
+        "price": 20.91,
+        "timestamp": "2026-08-21T19:44:52.318134+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00197500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 18.18,
+        "ask_price": 20.2,
+        "bid_size": 66.0,
+        "ask_size": 81.0,
+        "timestamp": "2026-08-21T19:59:59.565603+00:00"
+      },
+      "greeks": {
+        "delta": 0.8686,
+        "gamma": 0.0122,
+        "theta": -0.3262,
+        "vega": 0.0589,
+        "rho": 0.0276
+      },
+      "implied_volatility": 0.6307,
+      "latest_trade": {
+        "price": 18.68,
+        "timestamp": "2026-08-21T19:53:22.368688+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00200000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 16.07,
+        "ask_price": 16.55,
+        "bid_size": 11.0,
+        "ask_size": 30.0,
+        "timestamp": "2026-08-21T19:59:59.763551+00:00"
+      },
+      "greeks": {
+        "delta": 0.8836,
+        "gamma": 0.0141,
+        "theta": -0.2434,
+        "vega": 0.054,
+        "rho": 0.0286
+      },
+      "implied_volatility": 0.5017,
+      "latest_trade": {
+        "price": 16.4,
+        "timestamp": "2026-08-21T19:58:23.037044+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00202500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 14.12,
+        "ask_price": 14.86,
+        "bid_size": 41.0,
+        "ask_size": 73.0,
+        "timestamp": "2026-08-21T19:59:59.558271+00:00"
+      },
+      "greeks": {
+        "delta": 0.8228,
+        "gamma": 0.0173,
+        "theta": -0.3421,
+        "vega": 0.0717,
+        "rho": 0.0267
+      },
+      "implied_volatility": 0.545,
+      "latest_trade": {
+        "price": 14.75,
+        "timestamp": "2026-08-21T19:53:56.100499+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00205000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 12.2,
+        "ask_price": 12.42,
+        "bid_size": 56.0,
+        "ask_size": 34.0,
+        "timestamp": "2026-08-21T19:59:59.565544+00:00"
+      },
+      "greeks": {
+        "delta": 0.7847,
+        "gamma": 0.0205,
+        "theta": -0.3631,
+        "vega": 0.0807,
+        "rho": 0.0258
+      },
+      "implied_volatility": 0.5163,
+      "latest_trade": {
+        "price": 12.42,
+        "timestamp": "2026-08-21T19:59:33.336352+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00207500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 10.87,
+        "ask_price": 11.02,
+        "bid_size": 10.0,
+        "ask_size": 30.0,
+        "timestamp": "2026-08-21T19:59:59.398347+00:00"
+      },
+      "greeks": {
+        "delta": 0.7113,
+        "gamma": 0.0218,
+        "theta": -0.46,
+        "vega": 0.0943,
+        "rho": 0.0234
+      },
+      "implied_volatility": 0.5671,
+      "latest_trade": {
+        "price": 10.87,
+        "timestamp": "2026-08-21T19:57:23.647496+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00210000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 9.1,
+        "ask_price": 9.34,
+        "bid_size": 5.0,
+        "ask_size": 50.0,
+        "timestamp": "2026-08-21T19:59:59.218316+00:00"
+      },
+      "greeks": {
+        "delta": 0.6545,
+        "gamma": 0.0239,
+        "theta": -0.4871,
+        "vega": 0.1018,
+        "rho": 0.0217
+      },
+      "implied_volatility": 0.5586,
+      "latest_trade": {
+        "price": 9.15,
+        "timestamp": "2026-08-21T19:59:50.674042+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00212500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 7.55,
+        "ask_price": 7.81,
+        "bid_size": 26.0,
+        "ask_size": 65.0,
+        "timestamp": "2026-08-21T19:59:59.178250+00:00"
+      },
+      "greeks": {
+        "delta": 0.5923,
+        "gamma": 0.0254,
+        "theta": -0.5068,
+        "vega": 0.1072,
+        "rho": 0.0197
+      },
+      "implied_volatility": 0.5539,
+      "latest_trade": {
+        "price": 7.75,
+        "timestamp": "2026-08-21T19:59:57.189538+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00215000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 6.48,
+        "ask_price": 6.65,
+        "bid_size": 50.0,
+        "ask_size": 142.0,
+        "timestamp": "2026-08-21T19:59:59.608156+00:00"
+      },
+      "greeks": {
+        "delta": 0.5275,
+        "gamma": 0.0251,
+        "theta": -0.5358,
+        "vega": 0.1099,
+        "rho": 0.0176
+      },
+      "implied_volatility": 0.5733,
+      "latest_trade": {
+        "price": 6.55,
+        "timestamp": "2026-08-21T19:59:57.222580+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00217500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 5.37,
+        "ask_price": 5.49,
+        "bid_size": 35.0,
+        "ask_size": 45.0,
+        "timestamp": "2026-08-21T19:59:59.173358+00:00"
+      },
+      "greeks": {
+        "delta": 0.4651,
+        "gamma": 0.025,
+        "theta": -0.5364,
+        "vega": 0.1097,
+        "rho": 0.0156
+      },
+      "implied_volatility": 0.5762,
+      "latest_trade": {
+        "price": 5.4,
+        "timestamp": "2026-08-21T19:59:55.193442+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00220000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 4.44,
+        "ask_price": 4.52,
+        "bid_size": 35.0,
+        "ask_size": 95.0,
+        "timestamp": "2026-08-21T19:59:59.615337+00:00"
+      },
+      "greeks": {
+        "delta": 0.4056,
+        "gamma": 0.0241,
+        "theta": -0.5277,
+        "vega": 0.1071,
+        "rho": 0.0136
+      },
+      "implied_volatility": 0.5821,
+      "latest_trade": {
+        "price": 4.44,
+        "timestamp": "2026-08-21T19:59:56.162739+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00222500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 3.53,
+        "ask_price": 3.71,
+        "bid_size": 76.0,
+        "ask_size": 88.0,
+        "timestamp": "2026-08-21T19:59:59.392152+00:00"
+      },
+      "greeks": {
+        "delta": 0.3484,
+        "gamma": 0.023,
+        "theta": -0.5034,
+        "vega": 0.1021,
+        "rho": 0.0117
+      },
+      "implied_volatility": 0.5832,
+      "latest_trade": {
+        "price": 3.55,
+        "timestamp": "2026-08-21T19:59:52.147461+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00225000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 2.89,
+        "ask_price": 2.93,
+        "bid_size": 21.0,
+        "ask_size": 3.0,
+        "timestamp": "2026-08-21T19:59:59.423890+00:00"
+      },
+      "greeks": {
+        "delta": 0.296,
+        "gamma": 0.0214,
+        "theta": -0.4721,
+        "vega": 0.0954,
+        "rho": 0.01
+      },
+      "implied_volatility": 0.5861,
+      "latest_trade": {
+        "price": 2.89,
+        "timestamp": "2026-08-21T19:59:59.572399+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00227500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 2.25,
+        "ask_price": 2.3,
+        "bid_size": 32.0,
+        "ask_size": 701.0,
+        "timestamp": "2026-08-21T19:59:59.622530+00:00"
+      },
+      "greeks": {
+        "delta": 0.2464,
+        "gamma": 0.0196,
+        "theta": -0.4289,
+        "vega": 0.0871,
+        "rho": 0.0084
+      },
+      "implied_volatility": 0.584,
+      "latest_trade": {
+        "price": 2.28,
+        "timestamp": "2026-08-21T19:59:51.907514+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00230000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 1.77,
+        "ask_price": 1.8,
+        "bid_size": 60.0,
+        "ask_size": 38.0,
+        "timestamp": "2026-08-21T19:59:59.677280+00:00"
+      },
+      "greeks": {
+        "delta": 0.2037,
+        "gamma": 0.0175,
+        "theta": -0.3859,
+        "vega": 0.0782,
+        "rho": 0.0069
+      },
+      "implied_volatility": 0.586,
+      "latest_trade": {
+        "price": 1.8,
+        "timestamp": "2026-08-21T19:59:58.112007+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00232500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 1.38,
+        "ask_price": 1.45,
+        "bid_size": 8.0,
+        "ask_size": 43.0,
+        "timestamp": "2026-08-21T19:59:59.208448+00:00"
+      },
+      "greeks": {
+        "delta": 0.1681,
+        "gamma": 0.0154,
+        "theta": -0.3458,
+        "vega": 0.0694,
+        "rho": 0.0057
+      },
+      "implied_volatility": 0.5921,
+      "latest_trade": {
+        "price": 1.39,
+        "timestamp": "2026-08-21T19:59:55.865158+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260828C00235000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 1.1,
+        "ask_price": 1.14,
+        "bid_size": 108.0,
+        "ask_size": 126.0,
+        "timestamp": "2026-08-21T19:59:59.481032+00:00"
+      },
+      "greeks": {
+        "delta": 0.1379,
+        "gamma": 0.0133,
+        "theta": -0.3064,
+        "vega": 0.0608,
+        "rho": 0.0047
+      },
+      "implied_volatility": 0.5987,
+      "latest_trade": {
+        "price": 1.1,
+        "timestamp": "2026-08-21T19:59:59.359908+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00195000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 20.16,
+        "ask_price": 21.14,
+        "bid_size": 76.0,
+        "ask_size": 20.0,
+        "timestamp": "2026-08-21T19:59:59.371536+00:00"
+      },
+      "greeks": {
+        "delta": 0.9773,
+        "gamma": 0.0049,
+        "theta": -0.0518,
+        "vega": 0.0183,
+        "rho": 0.0468
+      },
+      "implied_volatility": 0.3235,
+      "latest_trade": {
+        "price": 21.11,
+        "timestamp": "2026-08-21T19:31:49.250393+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00197500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 18.22,
+        "ask_price": 18.88,
+        "bid_size": 61.0,
+        "ask_size": 58.0,
+        "timestamp": "2026-08-21T19:59:59.358711+00:00"
+      },
+      "greeks": {
+        "delta": 0.9219,
+        "gamma": 0.0107,
+        "theta": -0.1284,
+        "vega": 0.0494,
+        "rho": 0.0444
+      },
+      "implied_volatility": 0.4023,
+      "latest_trade": {
+        "price": 18.88,
+        "timestamp": "2026-08-21T19:50:00.042938+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00200000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 16.63,
+        "ask_price": 16.73,
+        "bid_size": 10.0,
+        "ask_size": 23.0,
+        "timestamp": "2026-08-21T19:59:59.397574+00:00"
+      },
+      "greeks": {
+        "delta": 0.8612,
+        "gamma": 0.0144,
+        "theta": -0.2059,
+        "vega": 0.0748,
+        "rho": 0.0416
+      },
+      "implied_volatility": 0.4547,
+      "latest_trade": {
+        "price": 16.63,
+        "timestamp": "2026-08-21T19:59:45.025411+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00202500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 14.53,
+        "ask_price": 14.67,
+        "bid_size": 41.0,
+        "ask_size": 68.0,
+        "timestamp": "2026-08-21T19:59:59.765248+00:00"
+      },
+      "greeks": {
+        "delta": 0.8205,
+        "gamma": 0.0171,
+        "theta": -0.2387,
+        "vega": 0.0886,
+        "rho": 0.04
+      },
+      "implied_volatility": 0.4519,
+      "latest_trade": {
+        "price": 15.08,
+        "timestamp": "2026-08-21T17:14:31.175041+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00205000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 12.41,
+        "ask_price": 12.9,
+        "bid_size": 125.0,
+        "ask_size": 104.0,
+        "timestamp": "2026-08-21T19:59:59.351729+00:00"
+      },
+      "greeks": {
+        "delta": 0.7719,
+        "gamma": 0.0198,
+        "theta": -0.2716,
+        "vega": 0.1022,
+        "rho": 0.0379
+      },
+      "implied_volatility": 0.4512,
+      "latest_trade": {
+        "price": 12.9,
+        "timestamp": "2026-08-21T19:52:54.107938+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00207500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 10.8,
+        "ask_price": 11.34,
+        "bid_size": 9.0,
+        "ask_size": 9.0,
+        "timestamp": "2026-08-21T19:59:59.018006+00:00"
+      },
+      "greeks": {
+        "delta": 0.7102,
+        "gamma": 0.0215,
+        "theta": -0.3165,
+        "vega": 0.1157,
+        "rho": 0.035
+      },
+      "implied_volatility": 0.4701,
+      "latest_trade": {
+        "price": 11.34,
+        "timestamp": "2026-08-21T19:49:23.967954+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00210000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 9.37,
+        "ask_price": 9.78,
+        "bid_size": 1.0,
+        "ask_size": 10.0,
+        "timestamp": "2026-08-21T19:59:59.175325+00:00"
+      },
+      "greeks": {
+        "delta": 0.6496,
+        "gamma": 0.0228,
+        "theta": -0.3482,
+        "vega": 0.1253,
+        "rho": 0.0321
+      },
+      "implied_volatility": 0.4814,
+      "latest_trade": {
+        "price": 9.5,
+        "timestamp": "2026-08-21T19:59:34.157327+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00212500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 8.15,
+        "ask_price": 8.31,
+        "bid_size": 5.0,
+        "ask_size": 14.0,
+        "timestamp": "2026-08-21T19:59:59.742539+00:00"
+      },
+      "greeks": {
+        "delta": 0.5889,
+        "gamma": 0.0234,
+        "theta": -0.371,
+        "vega": 0.1316,
+        "rho": 0.0292
+      },
+      "implied_volatility": 0.4914,
+      "latest_trade": {
+        "price": 8.18,
+        "timestamp": "2026-08-21T19:59:30.995774+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00215000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 6.67,
+        "ask_price": 6.86,
+        "bid_size": 11.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.539466+00:00"
+      },
+      "greeks": {
+        "delta": 0.5291,
+        "gamma": 0.0245,
+        "theta": -0.37,
+        "vega": 0.1346,
+        "rho": 0.0264
+      },
+      "implied_volatility": 0.4806,
+      "latest_trade": {
+        "price": 6.8,
+        "timestamp": "2026-08-21T19:59:41.471659+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00217500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 5.61,
+        "ask_price": 5.91,
+        "bid_size": 8.0,
+        "ask_size": 7.0,
+        "timestamp": "2026-08-21T19:59:59.621025+00:00"
+      },
+      "greeks": {
+        "delta": 0.4696,
+        "gamma": 0.0239,
+        "theta": -0.3779,
+        "vega": 0.1345,
+        "rho": 0.0235
+      },
+      "implied_volatility": 0.4929,
+      "latest_trade": {
+        "price": 5.78,
+        "timestamp": "2026-08-21T19:59:17.193379+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00220000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 4.63,
+        "ask_price": 4.74,
+        "bid_size": 4.0,
+        "ask_size": 5.0,
+        "timestamp": "2026-08-21T19:59:59.608730+00:00"
+      },
+      "greeks": {
+        "delta": 0.4105,
+        "gamma": 0.0235,
+        "theta": -0.3657,
+        "vega": 0.1315,
+        "rho": 0.0206
+      },
+      "implied_volatility": 0.489,
+      "latest_trade": {
+        "price": 4.7,
+        "timestamp": "2026-08-21T19:59:50.050884+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00222500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 3.75,
+        "ask_price": 3.88,
+        "bid_size": 30.0,
+        "ask_size": 4.0,
+        "timestamp": "2026-08-21T19:59:59.609813+00:00"
+      },
+      "greeks": {
+        "delta": 0.3548,
+        "gamma": 0.0225,
+        "theta": -0.3499,
+        "vega": 0.1259,
+        "rho": 0.0179
+      },
+      "implied_volatility": 0.49,
+      "latest_trade": {
+        "price": 3.88,
+        "timestamp": "2026-08-21T19:59:00.590807+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00225000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 3.08,
+        "ask_price": 3.27,
+        "bid_size": 76.0,
+        "ask_size": 82.0,
+        "timestamp": "2026-08-21T19:59:59.816524+00:00"
+      },
+      "greeks": {
+        "delta": 0.3063,
+        "gamma": 0.0208,
+        "theta": -0.3356,
+        "vega": 0.1187,
+        "rho": 0.0155
+      },
+      "implied_volatility": 0.4994,
+      "latest_trade": {
+        "price": 3.15,
+        "timestamp": "2026-08-21T19:59:39.765442+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00227500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 2.48,
+        "ask_price": 2.64,
+        "bid_size": 24.0,
+        "ask_size": 22.0,
+        "timestamp": "2026-08-21T19:59:59.169882+00:00"
+      },
+      "greeks": {
+        "delta": 0.2598,
+        "gamma": 0.0191,
+        "theta": -0.311,
+        "vega": 0.1097,
+        "rho": 0.0132
+      },
+      "implied_volatility": 0.5017,
+      "latest_trade": {
+        "price": 2.56,
+        "timestamp": "2026-08-21T19:59:18.429870+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00230000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 1.97,
+        "ask_price": 2.04,
+        "bid_size": 26.0,
+        "ask_size": 34.0,
+        "timestamp": "2026-08-21T19:59:58.932598+00:00"
+      },
+      "greeks": {
+        "delta": 0.2159,
+        "gamma": 0.0173,
+        "theta": -0.2794,
+        "vega": 0.0991,
+        "rho": 0.011
+      },
+      "implied_volatility": 0.4997,
+      "latest_trade": {
+        "price": 2.04,
+        "timestamp": "2026-08-21T19:59:55.724900+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00232500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 1.55,
+        "ask_price": 1.62,
+        "bid_size": 13.0,
+        "ask_size": 4.0,
+        "timestamp": "2026-08-21T19:59:59.398230+00:00"
+      },
+      "greeks": {
+        "delta": 0.1788,
+        "gamma": 0.0154,
+        "theta": -0.2501,
+        "vega": 0.0884,
+        "rho": 0.0091
+      },
+      "implied_volatility": 0.5018,
+      "latest_trade": {
+        "price": 1.62,
+        "timestamp": "2026-08-21T19:59:56.542058+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260831C00235000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 1.27,
+        "ask_price": 1.33,
+        "bid_size": 10.0,
+        "ask_size": 23.0,
+        "timestamp": "2026-08-21T19:59:59.609753+00:00"
+      },
+      "greeks": {
+        "delta": 0.1503,
+        "gamma": 0.0135,
+        "theta": -0.2274,
+        "vega": 0.079,
+        "rho": 0.0077
+      },
+      "implied_volatility": 0.5111,
+      "latest_trade": {
+        "price": 1.27,
+        "timestamp": "2026-08-21T19:59:44.590941+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260902C00195000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 20.88,
+        "ask_price": 21.73,
+        "bid_size": 125.0,
+        "ask_size": 90.0,
+        "timestamp": "2026-08-21T19:59:59.309458+00:00"
+      },
+      "greeks": {
+        "delta": 0.9104,
+        "gamma": 0.0098,
+        "theta": -0.1395,
+        "vega": 0.0605,
+        "rho": 0.0527
+      },
+      "implied_volatility": 0.4437,
+      "latest_trade": {
+        "price": 21.61,
+        "timestamp": "2026-08-21T17:13:46.937074+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260902C00197500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 18.34,
+        "ask_price": 19.27,
+        "bid_size": 56.0,
+        "ask_size": 81.0,
+        "timestamp": "2026-08-21T19:59:59.170912+00:00"
+      },
+      "greeks": {
+        "delta": 0.9026,
+        "gamma": 0.0115,
+        "theta": -0.1348,
+        "vega": 0.0644,
+        "rho": 0.0529
+      },
+      "implied_volatility": 0.4007,
+      "latest_trade": {
+        "price": 18.5,
+        "timestamp": "2026-08-21T19:59:04.063376+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260902C00200000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 16.79,
+        "ask_price": 17.2,
+        "bid_size": 79.0,
+        "ask_size": 142.0,
+        "timestamp": "2026-08-21T19:59:59.326869+00:00"
+      },
+      "greeks": {
+        "delta": 0.8447,
+        "gamma": 0.0144,
+        "theta": -0.1965,
+        "vega": 0.0892,
+        "rho": 0.0497
+      },
+      "implied_volatility": 0.444,
+      "latest_trade": {
+        "price": 16.9,
+        "timestamp": "2026-08-21T19:55:00.104753+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260902C00202500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 14.68,
+        "ask_price": 15.3,
+        "bid_size": 25.0,
+        "ask_size": 51.0,
+        "timestamp": "2026-08-21T19:59:59.931201+00:00"
+      },
+      "greeks": {
+        "delta": 0.803,
+        "gamma": 0.0167,
+        "theta": -0.2252,
+        "vega": 0.1037,
+        "rho": 0.0476
+      },
+      "implied_volatility": 0.4442,
+      "latest_trade": {
+        "price": 15.58,
+        "timestamp": "2026-08-21T16:52:46.138832+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260902C00205000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 13.14,
+        "ask_price": 13.32,
+        "bid_size": 46.0,
+        "ask_size": 62.0,
+        "timestamp": "2026-08-21T19:59:59.434367+00:00"
+      },
+      "greeks": {
+        "delta": 0.7513,
+        "gamma": 0.0186,
+        "theta": -0.26,
+        "vega": 0.1185,
+        "rho": 0.0448
+      },
+      "implied_volatility": 0.4552,
+      "latest_trade": {
+        "price": 13.32,
+        "timestamp": "2026-08-21T19:50:36.490506+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260902C00207500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 11.37,
+        "ask_price": 11.99,
+        "bid_size": 23.0,
+        "ask_size": 23.0,
+        "timestamp": "2026-08-21T19:59:59.171224+00:00"
+      },
+      "greeks": {
+        "delta": 0.6953,
+        "gamma": 0.0199,
+        "theta": -0.2936,
+        "vega": 0.1309,
+        "rho": 0.0416
+      },
+      "implied_volatility": 0.4702,
+      "latest_trade": {
+        "price": 11.75,
+        "timestamp": "2026-08-21T19:30:59.610293+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260902C00210000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 9.72,
+        "ask_price": 10.32,
+        "bid_size": 40.0,
+        "ask_size": 81.0,
+        "timestamp": "2026-08-21T19:59:59.859053+00:00"
+      },
+      "greeks": {
+        "delta": 0.6432,
+        "gamma": 0.0214,
+        "theta": -0.308,
+        "vega": 0.1394,
+        "rho": 0.0387
+      },
+      "implied_volatility": 0.4656,
+      "latest_trade": {
+        "price": 10.3,
+        "timestamp": "2026-08-21T19:49:46.047675+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260902C00212500",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 8.36,
+        "ask_price": 9.57,
+        "bid_size": 1.0,
+        "ask_size": 70.0,
+        "timestamp": "2026-08-21T19:59:59.568581+00:00"
+      },
+      "greeks": {
+        "delta": 0.5843,
+        "gamma": 0.0211,
+        "theta": -0.3387,
+        "vega": 0.1458,
+        "rho": 0.0352
+      },
+      "implied_volatility": 0.4933,
+      "latest_trade": {
+        "price": 8.5,
+        "timestamp": "2026-08-21T19:59:47.138235+00:00"
+      }
+    },
+    {
+      "symbol": "NVDA260902C00215000",
+      "snapshot_present": true,
+      "latest_quote": {
+        "bid_price": 7.04,
+        "ask_price": 7.47,
+        "bid_size": 22.0,
+        "ask_size": 2.0,
+        "timestamp": "2026-08-21T19:59:59.959247+00:00"
+      },
+      "greeks": {
+        "delta": 0.5302,
+        "gamma": 0.0228,
+        "theta": -0.3259,
+        "vega": 0.1487,
+        "rho": 0.0322
+      },
+      "implied_volatility": 0.4662,
+      "latest_trade": {
+        "price": 7.28,
+        "timestamp": "2026-08-21T19:59:52.145633+00:00"
+      }
+    }
+  ]
+}
