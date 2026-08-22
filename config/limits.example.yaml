@@ -51,6 +51,16 @@ prefilter:
   max_survivors_per_symbol: null        # int, cap handed to Agent 4
   exclude_days_before_earnings: null    # int -- filtered in code, pre-model
 
+# --- Signal engine (src/signals -- pure functions, no I/O) -----------------
+signals:
+  ema_slow: null                        # int, span of the slow EMA
+  atr_period: null                      # int, Wilder period
+  rsi_period: null                      # int, Wilder period
+  rsi_long_max: null                    # float, 0-100; above this, no long calls
+  rsi_short_min: null                   # float, 0-100; below this, no long puts
+  min_bars: null                        # int, warm-up before any signal is valid
+  vwap_session_anchored: true           # bool -- structural, keep true
+
 # --- Computed metrics: acceptance bands ------------------------------------
 metrics:
   max_theta_pct_per_day: null           # float, theta / premium
