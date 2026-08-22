@@ -185,5 +185,8 @@ roundtrip:
 # --- Decision log ----------------------------------------------------------
 decision_log:
   filename: "REPLACE_ME"                # e.g. "decision_log.jsonl"
-  rotate_daily: true                    # bool
-  redact_env_keys: true                 # bool -- never write secrets
+  rotate_daily: true                    # bool -- one file per session date
+  redact_env_keys: true                 # bool -- structural, never set false
+  fsync_every_record: false             # bool -- durability vs write latency
+  prefilter_detail: "REPLACE_ME"        # "aggregate" or "full" (per-contract)
+  max_response_chars: null              # int -- truncate a runaway model reply
