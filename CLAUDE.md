@@ -74,6 +74,28 @@ ANTHROPIC_API_KEY=
 
 ---
 
+## Accounts
+
+Two Alpaca paper accounts, under **separate logins**:
+
+| Account | Role | Rule |
+| --- | --- | --- |
+| `PA3RQB0ZXDIA` | **Dev.** All building, testing, replay, and every round trip before the event. | Use freely. Reset it whenever a clean $100k is wanted. |
+| `PA3KLBQXXYAO` | **Competition.** | **Untouched until 28 Aug.** Do not point `.env` at it, do not read it, do not place a single order in it before the event. |
+
+The account number is a **submission field, not a runtime value**. It appears
+nowhere in source, config, or the committed history, and nothing branches on
+it — `account_summary()` reads `account.account_number` back from the live API
+purely for display. Switching accounts on 28 Aug is therefore a **key change
+only**: swap `ALPACA_API_KEY` and `ALPACA_SECRET_KEY` in `.env`, change
+nothing else. If a code change is ever needed to switch accounts, that is a
+bug in the config boundary.
+
+Note that the Step 1 commit message (`8249cd3`) quotes account `PA3KLBQXXYAO`
+from a dry run made before the split was decided. The commit is not amended —
+rewriting history to fix a number in a message is not worth it — but the
+write-up must not copy that figure. Dev work belongs to `PA3RQB0ZXDIA`.
+
 ## Directory layout
 
 ```
