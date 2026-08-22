@@ -248,6 +248,9 @@ logs/
 tests/fixtures/**/*.private.json
 tests/fixtures/**/*.local.json
 
+# Provider caches (earnings dates etc). Local, refetchable, never committed.
+cache/
+
 # Local-only overrides of any committed file.
 *.local.yaml
 *.local.yml

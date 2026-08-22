@@ -204,6 +204,19 @@ roundtrip:
   fill_timeout_seconds: null            # int, then cancel and report
   strike_window_pct: null               # float, +/- around spot for the query
 
+# --- Earnings exclusion (provider: Financial Modeling Prep) ----------------
+# Fail closed everywhere: unknown, stale, or unreachable all mean "excluded".
+earnings:
+  provider: "REPLACE_ME"                # "fmp"
+  base_url: "REPLACE_ME"                # provider host
+  path: "REPLACE_ME"                    # earnings calendar path
+  request_timeout_seconds: null         # float
+  lookahead_days: null                  # int, how far ahead to ask
+  max_cache_age_hours: null             # float -- older than this excludes
+  max_hold_sessions: null               # int, matches the exit max hold
+  buffer_sessions: null                 # int, added to the hold window
+  require_confirmed: false              # bool -- treat estimates as unknown
+
 # --- Decision log ----------------------------------------------------------
 decision_log:
   filename: "REPLACE_ME"                # e.g. "decision_log.jsonl"

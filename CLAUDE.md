@@ -22,6 +22,101 @@ Three design consequences follow from the horizon, and must not drift:
 
 ---
 
+## Session handoff — 22 Aug 2026
+
+State at the end of the first build session. Read this first.
+
+### Build status
+
+| Step | State |
+| --- | --- |
+| 0 — Repo hygiene | Done. `fedf4d2` |
+| 1 — Broker round trip | **Code complete, UNVERIFIED.** `8249cd3`. Every read path proven; no order has ever been placed. Needs a regular session. |
+| 2 — OCC, contracts, quotes, cache | Done. `7f7dfd6` |
+| 3 — Signal engine | Done. `5f424ef`. Timeframe-agnostic; the swing revision changes only the bar frame and cadence, not this code. |
+| 4 — Prefilter + metrics | Done. `e01d264`, extended by `06dc7fa` (vertical metrics). |
+| 5 — Risk engine | Done. `ae38523` |
+| 6 — Decision logger | Done. `bd94998` (built early, deliberately). |
+| 7 — Agent layer | **Not started.** Blocked on the DTE decision and the earnings key. |
+| 8 — Replay harness | Not started. |
+| 9 — Orchestrator, CLI, dashboard | Not started. |
+
+~1190 offline tests, 10 live (`pytest -m live`). The suite is offline by default.
+
+### Open questions — both decided by Monday's measurement, neither by opinion
+
+Run `python -m cli.monday_measurement --json out.json` during the session. It
+sweeps three DTE buckets x three strike windows across SPY, NVDA and AMD.
+
+**1. DTE band.** Deliberately NOT fixed. `prefilter.dte_min/max` still hold
+intraday-era values (1–10 sessions) and are wrong for a 1–5 session swing hold.
+The measurement decides the band; total friction per unit of delta is the
+number that decides it, not theta alone.
+
+**2. Strike window.** `prefilter.strike_window_pct` is 0.10. After the delta
+band moved to 0.55–0.75 the survivor set fell to 8 on SPY and 5 on NVDA, which
+is too thin for Agent 4 to make a real choice. The sweep says whether widening
+recovers candidates.
+
+**Early signal from a Friday-close smoke run — treat as a hypothesis, not a
+result.** Survivor counts did not move at all across ±10/15/20% on SPY, which
+suggests the binding constraint is spread and open interest rather than the
+strike window. If Monday reproduces that, widening the window is not the fix.
+
+**A third question the smoke run raised, unprompted.** At `metrics` DTE of
+30–45 days the median contract cost $1,351 and at 120+ days $3,197. With
+`sizing.account_risk_pct_per_trade` at 0.01 and `assume_stop_gapped` on, the
+risk budget is $1,000 against a $1,351 risk-per-contract — **zero contracts
+clear the caps in every bucket.** The strategy revision predicted the capital
+constraint would bind; it binds harder than expected. Either
+`account_risk_pct_per_trade` rises toward the revision's 5%-of-equity figure,
+or the DTE band must be short enough to keep premiums affordable. Do not
+resolve this by turning off `assume_stop_gapped` — that sizes larger by
+pretending the overnight gap cannot happen.
+
+### Monday queue, in order
+
+1. **10:30 ET — greeks probe** on SPY and NVDA, before anything else. Baseline
+   to beat: inside the narrowed window, SPY 78% and NVDA 99% coverage; on a
+   wide chain, 58% and 47%. The result decides whether the hard reject on
+   missing delta removes a residue or a third of the chain.
+2. **Run the measurement harness.** Answers the DTE band, the strike window,
+   and the sizing question above.
+3. **Step 1 live round trip** — `python -m cli.step1_roundtrip --symbol SPY`,
+   no `--dry-run`. First real order this project has placed. `ALPACA_MOCK` must
+   be falsy or every write raises by design.
+4. Then Step 7.
+
+### Accounts
+
+See the Accounts section above. `PA3RQB0ZXDIA` is dev and is what `.env`
+currently points at. `PA3KLBQXXYAO` is the competition account, separate login,
+**untouched until 28 Aug**. The switch is a key change only.
+
+### Credentials
+
+`.env` holds Alpaca (dev, paper), Anthropic, and — once added — `FMP_API_KEY`.
+Validation is per consumer: broker steps do not need the Anthropic key, and
+neither needs FMP. **FMP_API_KEY is not yet set**, so the earnings exclusion
+cannot run; in live trading that state excludes every symbol, which is correct
+and deliberate.
+
+### Things deliberately left undone
+
+- **Vertical pairing.** `compute_vertical_metrics` is written and tested, but
+  nothing builds candidate vertical pairs from the survivor set yet.
+- **Cadence rework.** The revision moves Agent 1 and 2 to once per session
+  pre-market and Agent 5 to 30 minutes. That is orchestrator work (Step 9);
+  `src/signals/` needs no change.
+- **Exit values.** `exits.stop_pct` and `target_pct` still hold intraday-era
+  values (−35 / +60) against the revision's −40 / +75 starting points.
+- **`roundtrip.*` config block.** Step 1 spike only. Delete it once the real
+  order builder lands.
+- **No threshold has been tuned against Friday-close data.** Spreads at the
+  close are not spreads at 10:30. Everything above is measurement, not tuning.
+
+---
+
 ## Governing principle
 
 > **LLMs make judgments. Code makes calculations and enforces limits.**
@@ -118,7 +213,8 @@ write-up must not copy that figure. Dev work belongs to `PA3RQB0ZXDIA`.
 src/
   config.py            # loads config/*.yaml + .env; single source of truth
   brokers/alpaca/
-    client.py          # auth, session, retry/backoff
+    client.py          # auth, session, retry/backoff, sizing_capital guard
+    calendar.py        # trading sessions; DTE counted in sessions, not days
     contracts.py       # /v2/options/contracts discovery + pagination
     quotes.py          # option snapshots: quotes + greeks
     orders.py          # single-leg and mleg order construction
@@ -127,9 +223,11 @@ src/
     indicators.py      # ema, vwap, atr, rsi, percentile helpers
     engine.py          # signal evaluation given bars + a signal profile
   options/
-    occ.py             # OCC symbol build/parse
-    prefilter.py       # deterministic chain survivor set
-    metrics.py         # theta%, gamma, iv_vs_rv, spread cost, breakeven, modeled pnl
+    occ.py             # OCC symbol build/parse (fixed-width, root = symbol[:-15])
+    prefilter.py       # deterministic chain survivor set; narrows BEFORE snapshots
+    metrics.py         # PURE. six single-leg metrics + vertical risk/reward
+  earnings/
+    calendar.py        # FMP next-earnings dates; fail-closed cache
   agents/
     schemas.py         # pydantic models for all six agent contracts
     validator.py       # parse, clamp, retry, fail-closed
@@ -146,11 +244,14 @@ src/
   decisionlog/         # NOT `logging/` — that shadows the stdlib module
     decision_log.py    # append-only JSONL
 cli/                   # cron entry points
+  step1_roundtrip.py   # broker round trip (Step 1)
+  monday_measurement.py # DTE band x strike window sweep
 tests/
   fixtures/            # recorded Alpaca responses
 replay/                # offline bar replay harness
 config/                # GITIGNORED
 prompts/               # GITIGNORED
+cache/                 # GITIGNORED (provider data, refetchable)
 ```
 
 **`signals/` must stay I/O-free.** Pure functions over dataframes are what make the replay

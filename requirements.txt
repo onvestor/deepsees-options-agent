@@ -5,6 +5,7 @@ pydantic>=2.9,<3
 pandas>=2.2
 numpy>=1.26
 PyYAML>=6.0
+requests>=2.31
 
 # Dashboard (phase 9)
 fastapi>=0.115

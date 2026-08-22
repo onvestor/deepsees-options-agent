@@ -143,6 +143,7 @@ class Env:
     alpaca_base_url: str | None
     alpaca_data_url: str | None
     anthropic_api_key: str | None
+    fmp_api_key: str | None
     mock: bool
 
     @property
@@ -173,6 +174,16 @@ class Env:
             data_url=self.alpaca_data_url,
         )
 
+    def require_fmp(self) -> str:
+        """Key for the earnings calendar. Demanded only by the exclusion."""
+        if not self.fmp_api_key:
+            raise ConfigError(
+                "the earnings exclusion needs FMP_API_KEY -- set it in .env "
+                "(see .env.example). Running without it would trade through "
+                "earnings prints."
+            )
+        return self.fmp_api_key
+
     def require_anthropic(self) -> str:
         """Key for a model call. Demanded only when an agent is invoked."""
         if not self.anthropic_api_key:
@@ -188,6 +199,7 @@ class Env:
             f"alpaca_data_url={self.alpaca_data_url!r}, mock={self.mock}, "
             f"alpaca_keys={'set' if self.alpaca_api_key else 'unset'}, "
             f"anthropic_key={'set' if self.anthropic_api_key else 'unset'}, "
+            f"fmp_key={'set' if self.fmp_api_key else 'unset'}, "
             "secrets=<redacted>)"
         )
 
@@ -213,6 +225,7 @@ def _load_env(repo_root: Path) -> Env:
         alpaca_base_url=base_url.rstrip("/") if base_url else None,
         alpaca_data_url=data_url.rstrip("/") if data_url else None,
         anthropic_api_key=read("ANTHROPIC_API_KEY"),
+        fmp_api_key=read("FMP_API_KEY"),
         mock=mock,
     )
 
@@ -413,6 +426,12 @@ class Config:
                 f"prompt {name!r} not found at {path} -- prompts/ is operator-supplied "
                 "and is not part of the repository (see README)"
             )
+        return path
+
+    def ensure_cache_dir(self) -> Path:
+        """Create ``cache/`` on first use. Provider data, gitignored."""
+        path = _resolve_dir("DEEPSEES_CACHE_DIR", self.repo_root / "cache")
+        path.mkdir(parents=True, exist_ok=True)
         return path
 
     def ensure_log_dir(self) -> Path:
