@@ -428,11 +428,29 @@ short leg crushes too — which is one of the few cases where the vertical's fou
 crossings may be earned.
 
 So the buffer is **two-sided**. Entering the session *after* a print is not a clean slate; it
-is the single worst moment to buy premium on that name. Exclude for a configured number of
-sessions *after* the earnings date as well as before it — `earnings.post_print_buffer_sessions`
-is the key that will hold it. Note this is a **buffer on new entries**, not an exit rule: a
-position already open through a print is governed by the deterministic exits, and the crush is
-one of the reasons the hold-window exclusion exists in the first place.
+is the single worst moment to buy premium on that name. `earnings.post_print_buffer_sessions`
+(starting point 2) excludes for that many sessions *after* the print, counted in sessions, not
+days. This is a **buffer on new entries**, not an exit rule: a position already open through a
+print is governed by the deterministic exits, and the crush is one of the reasons the
+hold-window exclusion exists in the first place.
+
+Three things this depends on, all enforced:
+
+- **It needs the previous print date, not just the next one.** Once a print passes, the next
+  date jumps a quarter out and every forward-looking check reads clear on the exact session IV
+  is collapsing. `EarningsEntry.previous_date` carries it, read from the same symbol-scoped
+  payload — which returns past quarters alongside the upcoming one, and is the reason the
+  question can be asked at all.
+- **An unknown previous date excludes**, and `assert_universe_resolves()` refuses to start a
+  session without one while the buffer is active. Otherwise a provider that quietly stopped
+  returning past quarters would disarm the buffer while every forward check kept reporting
+  healthy — the same failure shape as the endpoint bug, one field over.
+- **The trading calendar must reach back past the print.** `sessions_until` cannot count across
+  days that were never fetched, and counting from the window edge would report a months-old
+  print as days old — a false exclusion indistinguishable from a real one. `TradingCalendar.
+  around()` takes `back_days` (default 7, which is forward-looking only); anything measuring
+  backwards must widen it. Where the window still cannot place the print outside the buffer,
+  the verdict fails closed and says to widen it.
 
 **The longer the DTE band, the more contracts span an earnings print** — a 4-month contract on
 almost any single name spans at least one. Longer-dated contracts also carry more vega, so they

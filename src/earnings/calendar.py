@@ -80,10 +80,15 @@ class EarningsEntry:
     confirmed: bool | None           # None = the payload carried no signal either way
     fetched_at: str                  # ISO8601 UTC
     source: str = "fmp"
+    previous_date: str | None = None  # most recent print at or before today
 
     @property
     def as_date(self) -> date | None:
         return date.fromisoformat(self.date) if self.date else None
+
+    @property
+    def previous_as_date(self) -> date | None:
+        return date.fromisoformat(self.previous_date) if self.previous_date else None
 
     @property
     def fetched_datetime(self) -> datetime:
@@ -110,6 +115,7 @@ class EarningsVerdict:
     earnings_date: str | None = None
     confirmed: bool | None = None
     sessions_until: int | None = None
+    sessions_since_last: int | None = None
     age_hours: float | None = None
     no_earnings_class: bool = False   # resolved by declaration, not by a date
 
@@ -266,6 +272,7 @@ class EarningsCalendar:
             confirmed=upcoming[1],
             fetched_at=fetched_at,
             source="fmp",
+            previous_date=_latest_past(rows, symbol, today),
         )
 
 
@@ -320,6 +327,35 @@ def _earliest_upcoming(
     return (best.isoformat() if best else None, best_confirmed)
 
 
+def _latest_past(rows: Iterable[dict], symbol: str, today: date) -> str | None:
+    """Most recent print at or before today, for the post-print buffer.
+
+    The forward date alone cannot answer "did this name just report": once a
+    print passes, the next date jumps a quarter out and the symbol reads clear
+    on the very session its implied volatility is collapsing. This is the same
+    payload, read backwards -- the symbol-scoped endpoint returns past quarters
+    alongside the upcoming one, which is the reason we can ask at all.
+    """
+    best: date | None = None
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("symbol", symbol)).upper() != symbol:
+            continue
+        raw = row.get("date") or row.get("earningsDate") or row.get("reportDate")
+        if not raw:
+            continue
+        try:
+            parsed = date.fromisoformat(str(raw)[:10])
+        except ValueError:
+            continue
+        if parsed > today:
+            continue
+        if best is None or parsed > best:
+            best = parsed
+    return best.isoformat() if best else None
+
+
 # ---------------------------------------------------------------------------
 # The exclusion itself
 # ---------------------------------------------------------------------------
@@ -336,6 +372,7 @@ def evaluate_exclusion(
     max_cache_age_hours: float,
     require_confirmed: bool = False,
     no_earnings: bool = False,
+    post_print_buffer_sessions: int = 0,
 ) -> EarningsVerdict:
     """Hold-window exclusion. Runs in code, before any model call, no override.
 
@@ -350,6 +387,15 @@ def evaluate_exclusion(
     the contradiction -- a declared-print-free symbol carrying a real date means
     the declaration is wrong, and a wrong declaration is more dangerous than a
     missing one because it reads as deliberate.
+
+    ``post_print_buffer_sessions`` closes the mirror-image hole. The forward
+    window alone cannot see a print that has already happened: the moment it
+    passes, the next date jumps a quarter out and the symbol reads *clear* on
+    the exact session its implied volatility is collapsing. For a long-premium
+    strategy that crush is a direct loss uncorrelated with direction. So the
+    buffer is two-sided, and an unknown previous date excludes for the same
+    reason an unknown next one does -- not knowing when a name last reported is
+    not evidence that it did not report yesterday.
     """
     if no_earnings:
         if entry is not None and entry.date is not None:
@@ -376,6 +422,45 @@ def evaluate_exclusion(
             earnings_date=entry.date, confirmed=entry.confirmed, age_hours=age,
         )
 
+    sessions_since: int | None = None
+    if post_print_buffer_sessions > 0:
+        if entry.previous_date is None:
+            return EarningsVerdict(
+                symbol, True,
+                "no previous earnings date known -- cannot rule out a print we "
+                "are still inside the IV crush of",
+                earnings_date=entry.date, confirmed=entry.confirmed, age_hours=age,
+            )
+        window_start = trading_calendar.sessions[0]
+        if entry.previous_as_date < window_start:
+            # The print predates the calendar we fetched. Sessions cannot be
+            # counted across days we never asked for, and quietly counting from
+            # the window edge would report a months-old print as days old --
+            # a false exclusion that looks exactly like a real one. Bound it
+            # instead: the print is at least as far back as the window itself.
+            lower_bound = trading_calendar.sessions_until(order_session, window_start) + 1
+            if lower_bound <= post_print_buffer_sessions:
+                return EarningsVerdict(
+                    symbol, True,
+                    f"previous print {entry.previous_date} predates the "
+                    f"{len(trading_calendar.sessions)}-session calendar window; "
+                    f"cannot rule out the post-print buffer -- widen back_days",
+                    earnings_date=entry.date, confirmed=entry.confirmed, age_hours=age,
+                )
+            sessions_since = lower_bound
+        else:
+            sessions_since = trading_calendar.sessions_until(
+                order_session, entry.previous_as_date
+            )
+        if 0 <= sessions_since <= post_print_buffer_sessions:
+            return EarningsVerdict(
+                symbol, True,
+                f"reported {sessions_since} session(s) ago, inside the "
+                f"{post_print_buffer_sessions}-session post-print IV crush buffer",
+                earnings_date=entry.date, confirmed=entry.confirmed,
+                sessions_since_last=sessions_since, age_hours=age,
+            )
+
     if entry.date is None:
         return EarningsVerdict(
             symbol, True, "no earnings date known", confirmed=entry.confirmed, age_hours=age
@@ -399,7 +484,8 @@ def evaluate_exclusion(
         return EarningsVerdict(
             symbol, True, "earnings date is in the past -- data is not current",
             earnings_date=entry.date, confirmed=entry.confirmed,
-            sessions_until=sessions_until, age_hours=age,
+            sessions_until=sessions_until, sessions_since_last=sessions_since,
+            age_hours=age,
         )
 
     if sessions_until <= horizon:
@@ -408,13 +494,14 @@ def evaluate_exclusion(
             f"earnings in {sessions_until} session(s), within the "
             f"{horizon}-session hold window",
             earnings_date=entry.date, confirmed=entry.confirmed,
-            sessions_until=sessions_until, age_hours=age,
+            sessions_until=sessions_until, sessions_since_last=sessions_since,
+            age_hours=age,
         )
 
     return EarningsVerdict(
         symbol, False, f"earnings {sessions_until} sessions out, clear of the window",
         earnings_date=entry.date, confirmed=entry.confirmed,
-        sessions_until=sessions_until, age_hours=age,
+        sessions_until=sessions_until, sessions_since_last=sessions_since, age_hours=age,
     )
 
 
@@ -424,6 +511,7 @@ def assert_universe_resolves(
     no_earnings_symbols: Iterable[str],
     now: datetime,
     max_cache_age_hours: float,
+    post_print_buffer_sessions: int = 0,
 ) -> dict[str, str]:
     """Every symbol must resolve to a real date or an explicit no-earnings claim.
 
@@ -432,6 +520,12 @@ def assert_universe_resolves(
     nothing trades on it. That safety is also what hides the break: a feed
     returning nothing for every symbol looks exactly like a quiet week. This
     assertion is the one place that refuses to accept silence as an answer.
+
+    When ``post_print_buffer_sessions`` is active the *previous* print date must
+    resolve as well. The buffer is only as good as that field, and a provider
+    that quietly stopped returning past quarters would disarm it while every
+    forward-looking check kept reporting healthy -- the same shape of failure
+    this assertion exists to catch, one field over.
 
     Returns a ``{symbol: resolution}`` map on success. Raises
     :class:`EarningsError` naming every symbol that resolved to neither, and
@@ -459,6 +553,8 @@ def assert_universe_resolves(
                 f"{symbol} (data {entry.age_hours(now):.1f}h old, "
                 f"limit {max_cache_age_hours:.0f}h)"
             )
+        elif post_print_buffer_sessions > 0 and entry.previous_date is None:
+            unresolved.append(f"{symbol} (no previous print date -- post-print buffer is blind)")
         else:
             resolved[symbol] = "earnings_date"
 

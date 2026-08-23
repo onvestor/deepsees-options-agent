@@ -219,6 +219,11 @@ earnings:
   max_cache_age_hours: null             # float -- older than this excludes
   max_hold_sessions: null               # int, matches the exit max hold
   buffer_sessions: null                 # int, added to the hold window
+  post_print_buffer_sessions: null      # int, sessions AFTER a print during
+                                        #   which we do not buy premium -- the
+                                        #   IV crush side. 0 disables the check
+                                        #   and the previous-date requirement
+                                        #   with it.
   require_confirmed: false              # bool -- treat estimates as unknown
 
 # --- Decision log ----------------------------------------------------------

@@ -34,12 +34,16 @@ CAL = TradingCalendar(
 )
 
 
-def entry(days_ahead=30, confirmed=True, age_hours=1.0, no_date=False):
+def entry(days_ahead=30, confirmed=True, age_hours=1.0, no_date=False, days_since=90):
+    """``days_since`` is the *previous* print, well clear of any buffer unless a
+    test moves it."""
     return EarningsEntry(
         symbol="NVDA",
         date=None if no_date else (SESSION + timedelta(days=days_ahead)).isoformat(),
         confirmed=confirmed,
         fetched_at=(NOW - timedelta(hours=age_hours)).isoformat(),
+        previous_date=None if days_since is None
+        else (SESSION - timedelta(days=days_since)).isoformat(),
     )
 
 
@@ -326,7 +330,9 @@ def test_cache_file_records_every_required_field(tmp_path):
     calendar = make_calendar(tmp_path, session)
     calendar.refresh(["NVDA"])
     row = json.loads(calendar.cache_path.read_text(encoding="utf-8"))["entries"]["NVDA"]
-    assert set(row) == {"symbol", "date", "confirmed", "fetched_at", "source"}
+    assert set(row) == {
+        "symbol", "date", "confirmed", "fetched_at", "source", "previous_date",
+    }
 
 
 # --- contract-span test ----------------------------------------------------
@@ -431,3 +437,151 @@ def test_the_halt_names_every_unresolved_symbol_not_just_the_first(tmp_path):
         assert_universe_resolves(["NVDA", "AAPL"], calendar, set(), NOW, 26.0)
     assert "NVDA" in str(exc.value) and "AAPL" in str(exc.value)
     assert "2 of 2" in str(exc.value)
+
+
+# --- the post-print IV crush buffer ----------------------------------------
+#
+# The forward window cannot see a print that has already happened: the moment
+# it passes, the next date jumps a quarter out and the symbol reads clear on
+# the exact session its IV is collapsing. Every test here is that hole.
+
+
+# A calendar reaching back far enough to place a previous print. CAL above
+# starts at SESSION, which is fine forwards and useless backwards.
+def weekday_calendar(back_days, forward_days):
+    days = tuple(
+        d for d in (SESSION + timedelta(days=n)
+                    for n in range(-back_days, forward_days + 1))
+        if d.weekday() < 5
+    )
+    return TradingCalendar(
+        sessions=days,
+        closes={d: datetime(d.year, d.month, d.day, 16, 0) for d in days},
+    )
+
+
+BACK_CAL = weekday_calendar(120, 120)
+BACK_SESSIONS = tuple(d for d in BACK_CAL.sessions if d <= SESSION)
+
+
+def prev_session(n):
+    """The date exactly ``n`` trading sessions before the order session."""
+    return BACK_SESSIONS[-1 - n]
+
+
+def post(sessions_back, buffer=2, calendar=BACK_CAL, **kwargs):
+    e = EarningsEntry(
+        symbol="NVDA",
+        date=(SESSION + timedelta(days=60)).isoformat(),
+        confirmed=True,
+        fetched_at=(NOW - timedelta(hours=1)).isoformat(),
+        previous_date=None if sessions_back is None else prev_session(sessions_back).isoformat(),
+    )
+    return verdict(e, trading_calendar=calendar,
+                   post_print_buffer_sessions=buffer, **kwargs)
+
+
+def test_the_session_after_a_print_is_excluded_though_the_forward_window_is_clear():
+    """NVDA reports Wednesday; Thursday's next date is a quarter out and reads
+    clear on every forward check. It is the worst session of the quarter to buy
+    premium on that name."""
+    result = post(sessions_back=1)
+    assert result.excluded
+    assert result.sessions_since_last == 1
+    assert "post-print IV crush buffer" in result.reason
+
+
+def test_the_last_session_inside_the_buffer_is_excluded():
+    result = post(sessions_back=2)
+    assert result.sessions_since_last == 2
+    assert result.excluded
+
+
+def test_the_first_session_past_the_buffer_is_clear():
+    result = post(sessions_back=3)
+    assert result.sessions_since_last == 3
+    assert not result.excluded
+
+
+def test_a_print_a_full_quarter_back_is_clear():
+    assert not post(sessions_back=60).excluded
+
+
+def test_an_unknown_previous_date_excludes():
+    """Not knowing when a name last reported is not evidence that it did not
+    report yesterday -- the same fail-closed logic as the forward side."""
+    result = post(sessions_back=None)
+    assert result.excluded
+    assert "no previous earnings date known" in result.reason
+
+
+def test_the_buffer_is_off_when_configured_to_zero():
+    """0 disables the check, and the unknown-previous requirement with it."""
+    assert not post(sessions_back=None, buffer=0).excluded
+    assert not post(sessions_back=1, buffer=0).excluded
+
+
+def test_the_buffer_counts_trading_sessions_not_calendar_days():
+    """A Friday print read on the following Monday is 1 session ago but 3
+    calendar days. Counting days would clear it a full buffer early."""
+    friday = prev_session(1)
+    assert friday.weekday() == 4 and (SESSION - friday).days == 3
+    result = post(sessions_back=1, buffer=1)
+    assert result.sessions_since_last == 1
+    assert result.excluded
+
+
+def test_a_print_predating_the_calendar_window_is_bounded_not_counted_from_the_edge():
+    """The guard this needs. Counting from the window edge would report a
+    months-old print as days old, and a false exclusion looks exactly like a
+    real one. Here the window holds 10 sessions before the order session, which
+    is enough to place any earlier print outside a 2-session buffer."""
+    short = weekday_calendar(14, 120)          # 10 sessions back, ample forward
+    e = EarningsEntry(
+        symbol="NVDA", date=(SESSION + timedelta(days=60)).isoformat(), confirmed=True,
+        fetched_at=(NOW - timedelta(hours=1)).isoformat(),
+        previous_date=(SESSION - timedelta(days=90)).isoformat(),   # outside `short`
+    )
+    result = verdict(e, trading_calendar=short, post_print_buffer_sessions=2)
+    assert not result.excluded
+
+
+def test_a_calendar_too_short_to_place_the_print_fails_closed():
+    """When the window cannot even bound the print outside the buffer, we do
+    not guess in the permissive direction."""
+    tiny = TradingCalendar(
+        sessions=SESSIONS[:1],
+        closes={SESSIONS[0]: datetime(2026, 8, 24, 16, 0)},
+    )
+    e = EarningsEntry(
+        symbol="NVDA", date=(SESSION + timedelta(days=60)).isoformat(), confirmed=True,
+        fetched_at=(NOW - timedelta(hours=1)).isoformat(),
+        previous_date=(SESSION - timedelta(days=90)).isoformat(),
+    )
+    result = verdict(e, trading_calendar=tiny, post_print_buffer_sessions=2)
+    assert result.excluded
+    assert "predates the" in result.reason and "widen back_days" in result.reason
+
+
+def test_refresh_records_the_previous_print_alongside_the_next(tmp_path):
+    """The clock is 2026-08-24, so 2026-08-20 is past and 2026-11-19 upcoming."""
+    session = FakeSession({"NVDA": [
+        {"symbol": "NVDA", "date": "2026-11-19"},
+        {"symbol": "NVDA", "date": "2026-08-20"},
+        {"symbol": "NVDA", "date": "2026-05-20"},
+    ]})
+    stored = make_calendar(tmp_path, session).refresh(["NVDA"])["NVDA"]
+    assert stored.date == "2026-11-19"
+    assert stored.previous_date == "2026-08-20"      # the latest past, not the earliest
+
+
+def test_a_symbol_with_no_previous_print_halts_the_session_when_the_buffer_is_on(tmp_path):
+    """The buffer is only as good as previous_date. A provider that quietly
+    stopped returning past quarters would disarm it while every forward-looking
+    check kept reporting healthy."""
+    calendar = populated(tmp_path, {"NVDA": [{"symbol": "NVDA", "date": "2026-11-19"}]})
+    with pytest.raises(EarningsError, match="post-print buffer is blind"):
+        assert_universe_resolves(["NVDA"], calendar, set(), NOW, 26.0,
+                                 post_print_buffer_sessions=2)
+    # ...and is silent about it when the buffer is off.
+    assert assert_universe_resolves(["NVDA"], calendar, set(), NOW, 26.0)

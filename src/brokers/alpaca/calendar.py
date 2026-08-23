@@ -66,9 +66,23 @@ class TradingCalendar:
         return cls(sessions=sessions, closes=closes)
 
     @classmethod
-    def around(cls, clients: AlpacaClients, anchor: date, forward_days: int) -> "TradingCalendar":
-        """Window wide enough to cover the DTE band plus holiday slack."""
-        return cls.fetch(clients, anchor - timedelta(days=7), anchor + timedelta(days=forward_days))
+    def around(
+        cls,
+        clients: AlpacaClients,
+        anchor: date,
+        forward_days: int,
+        back_days: int = 7,
+    ) -> "TradingCalendar":
+        """Window wide enough to cover the DTE band plus holiday slack.
+
+        ``back_days`` defaults to a week, which is all a forward-looking DTE
+        question needs. Anything measuring backwards -- the post-print earnings
+        buffer counts sessions since the last report -- must widen it: sessions
+        cannot be counted across days that were never fetched.
+        """
+        return cls.fetch(
+            clients, anchor - timedelta(days=back_days), anchor + timedelta(days=forward_days)
+        )
 
     def is_session(self, day: date) -> bool:
         return day in self.closes

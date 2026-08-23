@@ -67,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
     max_hold = limits.get_int("earnings.max_hold_sessions")
     buffer = limits.get_int("earnings.buffer_sessions")
     require_confirmed = limits.get_bool("earnings.require_confirmed")
+    post_print = limits.get_int("earnings.post_print_buffer_sessions")
 
     calendar = EarningsCalendar.from_config(config)
     now = datetime.now(tz=timezone.utc)
@@ -83,7 +84,9 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         clients = build_clients(config)
-        trading_calendar = TradingCalendar.around(clients, now.date(), 200)
+        # back_days must clear a full quarter: the post-print buffer counts
+        # sessions since the last report, and the last report is a quarter back.
+        trading_calendar = TradingCalendar.around(clients, now.date(), 200, back_days=150)
     except Exception as exc:  # noqa: BLE001 -- reported, not swallowed
         log.error("could not build the trading calendar: %s", exc)
         return 4
@@ -102,24 +105,29 @@ def main(argv: list[str] | None = None) -> int:
             max_cache_age_hours=max_age,
             require_confirmed=require_confirmed,
             no_earnings=symbol in no_earnings,
+            post_print_buffer_sessions=post_print,
         )
         rows.append(verdict.to_dict())
 
     horizon = max_hold + buffer
-    print(f"order session {order_session} | horizon {max_hold}+{buffer}={horizon} sessions "
-          f"| require_confirmed={require_confirmed}")
-    print(f"{'SYMBOL':<8}{'EXCLUDED':<10}{'DATE':<13}{'CONF':<7}{'SESS':<7}REASON")
+    print(f"order session {order_session} | forward horizon {max_hold}+{buffer}={horizon} "
+          f"sessions | post-print buffer {post_print} | require_confirmed={require_confirmed}")
+    print(f"{'SYMBOL':<8}{'EXCLUDED':<10}{'NEXT':<13}{'PREV':<13}{'CONF':<7}"
+          f"{'AHEAD':<7}{'SINCE':<7}REASON")
     for row in rows:
         confirmed = "-" if row["confirmed"] is None else str(row["confirmed"])
+        ahead = "-" if row["sessions_until"] is None else row["sessions_until"]
+        since = "-" if row["sessions_since_last"] is None else row["sessions_since_last"]
+        entry = calendar.get(row["symbol"])
+        previous = (entry.previous_date if entry else None) or "-"
         print(f"{row['symbol']:<8}{str(row['excluded']):<10}"
-              f"{row['earnings_date'] or '-':<13}{confirmed:<7}"
-              f"{'-' if row['sessions_until'] is None else row['sessions_until']:<7}"
-              f"{row['reason']}")
+              f"{row['earnings_date'] or '-':<13}{previous:<13}{confirmed:<7}"
+              f"{ahead:<7}{since:<7}{row['reason']}")
 
     status, code = "resolved", 0
     try:
         resolution = assert_universe_resolves(
-            symbols, calendar, no_earnings, now, max_age
+            symbols, calendar, no_earnings, now, max_age, post_print
         )
     except EarningsError as exc:
         log.error("%s", exc)
@@ -131,6 +139,7 @@ def main(argv: list[str] | None = None) -> int:
                 "generated_at": now.isoformat(),
                 "order_session": order_session.isoformat(),
                 "horizon_sessions": horizon,
+                "post_print_buffer_sessions": post_print,
                 "status": status,
                 "resolution": resolution,
                 "verdicts": rows,
