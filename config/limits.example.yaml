@@ -209,9 +209,13 @@ roundtrip:
 earnings:
   provider: "REPLACE_ME"                # "fmp"
   base_url: "REPLACE_ME"                # provider host
-  path: "REPLACE_ME"                    # earnings calendar path
+  path: "REPLACE_ME"                    # SYMBOL-SCOPED earnings path. A
+                                        #   market-wide calendar path that
+                                        #   ignores `symbol` will silently
+                                        #   return another company's dates.
   request_timeout_seconds: null         # float
-  lookahead_days: null                  # int, how far ahead to ask
+  max_rows: null                        # int, rows requested per symbol; the
+                                        #   provider tier may cap this
   max_cache_age_hours: null             # float -- older than this excludes
   max_hold_sessions: null               # int, matches the exit max hold
   buffer_sessions: null                 # int, added to the hold window

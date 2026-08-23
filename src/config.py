@@ -383,6 +383,29 @@ class Universe(Section):
             raise ConfigError(f"{self.source}: duplicate symbols {duplicates}")
         return tuple(symbols)
 
+    @property
+    def no_earnings_symbols(self) -> frozenset[str]:
+        """Symbols that structurally never report earnings -- index/sector ETFs.
+
+        Declared, never inferred. The earnings exclusion fails closed, so an
+        ETF's permanent "no date known" would block it forever behind an
+        exclusion that looks healthy. Every entry must also appear in
+        ``symbols``: a no-earnings claim about a symbol we do not trade is a
+        typo, and silently ignoring it is how the list rots.
+        """
+        raw = self.get_list("no_earnings") if self.has("no_earnings") else []
+        declared: set[str] = set()
+        for entry in raw:
+            if not isinstance(entry, str) or not entry.strip():
+                raise ConfigError(f"{self.source}: 'no_earnings' must contain non-empty strings")
+            declared.add(entry.strip().upper())
+        unknown = sorted(declared - set(self.symbols))
+        if unknown:
+            raise ConfigError(
+                f"{self.source}: 'no_earnings' lists {unknown}, which are not in 'symbols'"
+            )
+        return frozenset(declared)
+
     def override(self, symbol: str, dotted_key: str) -> Any:
         """Per-symbol value, falling back to the universe-wide default.
 
@@ -478,6 +501,7 @@ def load_config(repo_root: Path | None = None) -> Config:
     # Touch the symbol list once at load, so a malformed universe fails here
     # rather than mid-session.
     _ = config.universe.symbols
+    _ = config.universe.no_earnings_symbols
     return config
 
 

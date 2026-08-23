@@ -41,6 +41,14 @@ overrides:
     enabled: true                   # bool
     bar_timeframe: "PLACEHOLDER"    # e.g. "1Min" for a faster name
 
+# Symbols that structurally have no earnings print -- index and sector ETFs.
+# The earnings exclusion fails closed, so an ETF's "no date known" would block
+# it forever. Every symbol in `symbols` must resolve to either a real earnings
+# date or membership here; the startup assertion refuses to run otherwise.
+# This is an instrument claim, never a way to skip the check.
+no_earnings:
+  - PLACEHOLDER_A
+
 # Symbols never traded regardless of the list above. Checked before any model
 # call. Real file: names with known event risk or unusable option liquidity.
 blacklist:

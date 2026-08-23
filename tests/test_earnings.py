@@ -17,6 +17,7 @@ from src.earnings.calendar import (
     EarningsCalendar,
     EarningsEntry,
     EarningsError,
+    assert_universe_resolves,
     evaluate_exclusion,
     spans_earnings,
 )
@@ -129,7 +130,18 @@ def test_unconfirmed_can_be_treated_as_unknown():
     strict = verdict(entry(days_ahead=30, confirmed=False), require_confirmed=True)
     assert not lenient.excluded
     assert strict.excluded
-    assert "estimate, not confirmed" in strict.reason
+    assert "marks it an estimate" in strict.reason
+
+
+def test_no_confirmation_signal_is_reported_as_silence_not_as_an_estimate():
+    """`confirmed=None` and `confirmed=False` both exclude under
+    require_confirmed, but for different reasons, and the reason is the whole
+    point: one means the provider called it an estimate, the other means the
+    provider said nothing. Collapsing them hides a dead field."""
+    strict = verdict(entry(days_ahead=30, confirmed=None), require_confirmed=True)
+    assert strict.excluded
+    assert "no confirmation signal" in strict.reason
+    assert not verdict(entry(days_ahead=30, confirmed=None)).excluded
 
 
 def test_the_window_is_measured_in_trading_sessions_not_calendar_days():
@@ -172,9 +184,9 @@ def make_calendar(tmp_path, session, api_key="test-key"):
         api_key=api_key,
         cache_path=tmp_path / "earnings.json",
         base_url="https://example.invalid",
-        path="/stable/earnings-calendar",
+        path="/stable/earnings",
         timeout=5.0,
-        lookahead_days=120,
+        max_rows=5,
         clock=lambda: NOW,
         session=session,
     )
@@ -201,9 +213,46 @@ def test_refresh_picks_the_earliest_upcoming_date(tmp_path):
     assert make_calendar(tmp_path, session).refresh(["NVDA"])["NVDA"].date == "2026-11-19"
 
 
-def test_a_row_with_no_confirmation_signal_is_unconfirmed(tmp_path):
-    session = FakeSession({"NVDA": [{"symbol": "NVDA", "date": "2026-11-19"}]})
+def test_a_row_with_no_confirmation_signal_is_null_not_false(tmp_path):
+    """The live /stable/earnings payload carries epsEstimated and lastUpdated
+    and no scheduling field at all. Reporting False there would claim the
+    provider called it an estimate, which it never did."""
+    session = FakeSession({"NVDA": [
+        {"symbol": "NVDA", "date": "2026-11-19", "epsActual": None,
+         "epsEstimated": 2.09, "lastUpdated": "2026-08-23"},
+    ]})
+    assert make_calendar(tmp_path, session).refresh(["NVDA"])["NVDA"].confirmed is None
+
+
+def test_an_explicit_time_field_still_reads_as_confirmed(tmp_path):
+    session = FakeSession({"NVDA": [{"symbol": "NVDA", "date": "2026-11-19", "time": "amc"}]})
+    assert make_calendar(tmp_path, session).refresh(["NVDA"])["NVDA"].confirmed is True
+
+
+def test_an_unrecognised_time_field_reads_as_unconfirmed_not_null(tmp_path):
+    session = FakeSession({"NVDA": [{"symbol": "NVDA", "date": "2026-11-19", "time": "--"}]})
     assert make_calendar(tmp_path, session).refresh(["NVDA"])["NVDA"].confirmed is False
+
+
+def test_a_response_for_other_symbols_raises_rather_than_filtering_to_nothing(tmp_path):
+    """The bug this rewrite exists to remove. /stable/earnings-calendar ignores
+    `symbol` and returns a capped market-wide slice; filtering it client-side
+    yields None, which fails closed and therefore looks fine -- right up until
+    a later row for the right symbol survives the cap and reads as *clear*."""
+    session = FakeSession({"NVDA": [
+        {"symbol": "FDX", "date": "2026-09-17"},
+        {"symbol": "ADBE", "date": "2026-09-10"},
+    ]})
+    with pytest.raises(EarningsError, match="not symbol-scoped"):
+        make_calendar(tmp_path, session).refresh(["NVDA"])
+
+
+def test_the_request_is_symbol_scoped_and_carries_no_date_bounds(tmp_path):
+    session = FakeSession({"NVDA": [{"symbol": "NVDA", "date": "2026-11-19"}]})
+    make_calendar(tmp_path, session).refresh(["NVDA"])
+    url = session.urls[0]
+    assert "symbol=NVDA" in url and "limit=5" in url
+    assert "from=" not in url and "to=" not in url
 
 
 def test_empty_provider_response_yields_no_date_which_excludes(tmp_path):
@@ -291,3 +340,94 @@ def test_spans_earnings():
 def test_spans_earnings_is_unknown_when_the_date_is_unknown():
     """None, not False. The caller decides, and the prefilter excludes."""
     assert spans_earnings(date(2026, 12, 18), None) is None
+
+
+# --- the declared no-earnings class ----------------------------------------
+
+
+def test_a_declared_no_earnings_instrument_is_tradeable_despite_having_no_date():
+    """SPY has no print and never will. Without the declaration, rule 1 blocks
+    the most liquid name in the universe forever, behind an exclusion that
+    looks perfectly healthy."""
+    result = verdict(entry(no_date=True), symbol="SPY", no_earnings=True)
+    assert not result.excluded
+    assert result.no_earnings_class
+    assert "declared in universe.yaml" in result.reason
+
+
+def test_a_no_earnings_instrument_with_no_entry_at_all_is_still_clear():
+    """The claim is about the instrument and comes from config, so it does not
+    depend on the provider having been reached."""
+    assert not verdict(None, symbol="SPY", no_earnings=True).excluded
+
+
+def test_a_no_earnings_instrument_is_not_exempt_from_staleness_by_accident():
+    """Staleness is skipped for the class deliberately -- but only because the
+    claim is config-borne. A stale entry must not become a back door for a
+    symbol that is NOT in the class."""
+    assert verdict(entry(days_ahead=30, age_hours=200.0), no_earnings=False).excluded
+
+
+def test_a_declared_no_earnings_symbol_that_returns_a_date_excludes_loudly():
+    """A wrong declaration is more dangerous than a missing one: it reads as
+    deliberate. Trust the provider over the config and say so."""
+    result = verdict(entry(days_ahead=3), symbol="SPY", no_earnings=True)
+    assert result.excluded
+    assert "declared no-earnings but the provider returned" in result.reason
+    assert result.no_earnings_class
+
+
+# --- the startup assertion -------------------------------------------------
+
+
+def populated(tmp_path, by_symbol):
+    calendar = make_calendar(tmp_path, FakeSession(by_symbol))
+    calendar.refresh(list(by_symbol))
+    return calendar
+
+
+def test_universe_resolves_when_every_symbol_has_a_date_or_a_declaration(tmp_path):
+    calendar = populated(tmp_path, {
+        "NVDA": [{"symbol": "NVDA", "date": "2026-11-19"}],
+        "SPY": [],
+    })
+    resolved = assert_universe_resolves(
+        ["NVDA", "SPY"], calendar, {"SPY"}, NOW, 26.0
+    )
+    assert resolved == {"NVDA": "earnings_date", "SPY": "no_earnings_class"}
+
+
+def test_a_symbol_resolving_to_silence_halts_the_session(tmp_path):
+    """The assertion that would have caught the endpoint bug on day one. Every
+    other rule makes a dead feed *safe*; only this one makes it *visible*."""
+    calendar = populated(tmp_path, {"NVDA": [], "AAPL": [{"symbol": "AAPL", "date": "2026-10-29"}]})
+    with pytest.raises(EarningsError, match="NVDA .fetched, no date returned"):
+        assert_universe_resolves(["NVDA", "AAPL"], calendar, set(), NOW, 26.0)
+
+
+def test_a_never_fetched_symbol_halts_the_session(tmp_path):
+    calendar = populated(tmp_path, {"NVDA": [{"symbol": "NVDA", "date": "2026-11-19"}]})
+    with pytest.raises(EarningsError, match="AAPL .no entry"):
+        assert_universe_resolves(["NVDA", "AAPL"], calendar, set(), NOW, 26.0)
+
+
+def test_a_stale_symbol_halts_the_session(tmp_path):
+    calendar = populated(tmp_path, {"NVDA": [{"symbol": "NVDA", "date": "2026-11-19"}]})
+    later = NOW + timedelta(hours=30)
+    with pytest.raises(EarningsError, match="30.0h old"):
+        assert_universe_resolves(["NVDA"], calendar, set(), later, 26.0)
+
+
+def test_a_contradicted_declaration_halts_the_session(tmp_path):
+    """Declaring a real company print-free must not be a way to skip the check."""
+    calendar = populated(tmp_path, {"NVDA": [{"symbol": "NVDA", "date": "2026-11-19"}]})
+    with pytest.raises(EarningsError, match="declared no-earnings, got 2026-11-19"):
+        assert_universe_resolves(["NVDA"], calendar, {"NVDA"}, NOW, 26.0)
+
+
+def test_the_halt_names_every_unresolved_symbol_not_just_the_first(tmp_path):
+    calendar = populated(tmp_path, {"NVDA": [], "AAPL": []})
+    with pytest.raises(EarningsError) as exc:
+        assert_universe_resolves(["NVDA", "AAPL"], calendar, set(), NOW, 26.0)
+    assert "NVDA" in str(exc.value) and "AAPL" in str(exc.value)
+    assert "2 of 2" in str(exc.value)

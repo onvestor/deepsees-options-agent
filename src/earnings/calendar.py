@@ -5,7 +5,17 @@ accepts only ``dividend``, ``merger``, ``spinoff`` and ``split`` -- verified
 against the live API, not assumed. So this is a second provider, and every
 second provider is a new way for the system to be quietly wrong.
 
-**Fail closed, in three distinct ways.** An earnings exclusion that degrades to
+**Use a symbol-scoped endpoint.** ``/stable/earnings-calendar`` accepts a
+``symbol`` parameter and silently ignores it -- the payload is byte-identical
+with and without it -- then the free tier caps the response to a middle slice
+of the requested range. Filtering that client-side yields "the earliest row for
+this symbol that happened to survive the cap", which is not the symbol's next
+earnings date and is indistinguishable from one. Measured 2026-08-23: NVDA
+reported in three days and the parse returned no date at all. It failed closed
+that time; the same bug with a later row inside the slice reads as *clear* and
+buys straight into a print. ``/stable/earnings?symbol=X`` is the scoped call.
+
+**Fail closed, in four distinct ways.** An earnings exclusion that degrades to
 "no date known, trade freely" is worse than no exclusion at all, because it
 looks like it is working:
 
@@ -14,6 +24,17 @@ looks like it is working:
    excluded. A date fetched last week is not evidence about this week.
 3. **Fetch failure** -- the refresh raises rather than returning an empty map,
    so a provider outage cannot silently empty the exclusion list.
+4. **Unresolved at startup** -- :func:`assert_universe_resolves` refuses to run
+   a session in which any symbol resolves to neither a real date nor an
+   explicit no-earnings declaration. The three rules above make a broken feed
+   *safe*; this one makes it *visible*, which is the part that was missing.
+
+**The no-earnings class is declared, not inferred.** An index ETF has no print,
+so rule 1 would block SPY and QQQ forever behind an exclusion that looks
+healthy. ``config/universe.yaml: no_earnings`` names those instruments
+explicitly. It is a claim about the instrument, never a way to skip the check:
+a symbol in the class that *does* return a date is a contradiction and is
+excluded loudly.
 
 Each cached entry carries ``date``, ``confirmed`` and ``fetched_at``.
 ``confirmed`` matters: an *estimated* earnings date and a company-confirmed one
@@ -27,7 +48,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, asdict
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence
 from urllib.parse import urlencode
@@ -41,6 +62,7 @@ __all__ = [
     "EarningsEntry",
     "EarningsError",
     "EarningsVerdict",
+    "assert_universe_resolves",
     "evaluate_exclusion",
 ]
 
@@ -55,7 +77,7 @@ class EarningsEntry:
 
     symbol: str
     date: str | None                 # ISO date, or None if the provider had none
-    confirmed: bool
+    confirmed: bool | None           # None = the payload carried no signal either way
     fetched_at: str                  # ISO8601 UTC
     source: str = "fmp"
 
@@ -86,9 +108,10 @@ class EarningsVerdict:
     excluded: bool
     reason: str
     earnings_date: str | None = None
-    confirmed: bool = False
+    confirmed: bool | None = None
     sessions_until: int | None = None
     age_hours: float | None = None
+    no_earnings_class: bool = False   # resolved by declaration, not by a date
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -108,7 +131,7 @@ class EarningsCalendar:
         base_url: str,
         path: str,
         timeout: float,
-        lookahead_days: int,
+        max_rows: int,
         clock: Callable[[], datetime] | None = None,
         session: Any | None = None,
     ) -> None:
@@ -117,7 +140,7 @@ class EarningsCalendar:
         self.base_url = base_url.rstrip("/")
         self.path = "/" + path.strip("/")
         self.timeout = timeout
-        self.lookahead_days = lookahead_days
+        self.max_rows = max_rows
         self._clock = clock or (lambda: datetime.now(tz=timezone.utc))
         self._session = session or requests
         self._entries: dict[str, EarningsEntry] = {}
@@ -134,7 +157,7 @@ class EarningsCalendar:
             base_url=limits.get_str("earnings.base_url"),
             path=limits.get_str("earnings.path"),
             timeout=limits.get_float("earnings.request_timeout_seconds"),
-            lookahead_days=limits.get_int("earnings.lookahead_days"),
+            max_rows=limits.get_int("earnings.max_rows"),
             **kwargs,
         )
 
@@ -207,13 +230,16 @@ class EarningsCalendar:
         return results
 
     def _fetch_one(self, symbol: str, fetched_at: str) -> EarningsEntry:
+        """One symbol, from the symbol-scoped endpoint.
+
+        No date bounds: this endpoint returns that symbol's most recent
+        ``max_rows`` reports, past and future, and we pick the earliest one at
+        or after today. Asking for a date range here is what broke the previous
+        implementation -- the range parameters belong to the market-wide
+        calendar path, which ignores ``symbol`` entirely.
+        """
         today = self._clock().date()
-        params = {
-            "symbol": symbol,
-            "from": today.isoformat(),
-            "to": (today + timedelta(days=self.lookahead_days)).isoformat(),
-            "apikey": self.api_key,
-        }
+        params = {"symbol": symbol, "limit": self.max_rows, "apikey": self.api_key}
         url = f"{self.base_url}{self.path}?{urlencode(params)}"
         response = self._session.get(url, timeout=self.timeout)
         if response.status_code != 200:
@@ -221,6 +247,17 @@ class EarningsCalendar:
         rows = response.json()
         if not isinstance(rows, list):
             raise EarningsError(f"expected a list, got {type(rows).__name__}")
+        if rows and not any(
+            str(r.get("symbol", "")).upper() == symbol
+            for r in rows if isinstance(r, dict)
+        ):
+            # Rows came back for other tickers: the endpoint is not honouring
+            # `symbol`. Silently filtering to nothing here is the exact bug
+            # this rewrite exists to remove.
+            raise EarningsError(
+                f"response contains no rows for {symbol} -- endpoint is not "
+                f"symbol-scoped; check earnings.path"
+            )
 
         upcoming = _earliest_upcoming(rows, symbol, today)
         return EarningsEntry(
@@ -232,7 +269,29 @@ class EarningsCalendar:
         )
 
 
-def _earliest_upcoming(rows: Iterable[dict], symbol: str, today: date) -> tuple[str | None, bool]:
+def _confirmation(row: dict) -> bool | None:
+    """Whether the provider says this date is scheduled, estimated, or neither.
+
+    Returns ``None`` when the payload carries no confirmation signal at all --
+    which is the case for the ``/stable/earnings`` shape, whose forward rows
+    hold only ``epsEstimated``, ``revenueEstimated`` and ``lastUpdated``.
+    Reporting ``False`` there would be a lie in the safe-looking direction: it
+    reads as "the provider told us this is an estimate" when the provider told
+    us nothing. The distinction matters because ``require_confirmed`` turns
+    "not True" into an exclusion, and an operator flipping that flag deserves
+    to know whether they are filtering estimates or filtering silence.
+    """
+    if row.get("epsActual") is not None or row.get("eps") is not None:
+        return True                      # actuals exist -- the print is real
+    raw_time = row.get("time")
+    if raw_time is not None:
+        return str(raw_time).lower() in ("bmo", "amc", "dmh")
+    return None                          # no signal in this payload shape
+
+
+def _earliest_upcoming(
+    rows: Iterable[dict], symbol: str, today: date
+) -> tuple[str | None, bool | None]:
     """Earliest dated row at or after today, plus whether it looks confirmed.
 
     FMP has shipped several shapes for this payload over the years, so the
@@ -240,7 +299,7 @@ def _earliest_upcoming(rows: Iterable[dict], symbol: str, today: date) -> tuple[
     unparseable row is skipped, and no rows means no date, which excludes.
     """
     best: date | None = None
-    best_confirmed = False
+    best_confirmed: bool | None = None
     for row in rows:
         if not isinstance(row, dict):
             continue
@@ -255,13 +314,7 @@ def _earliest_upcoming(rows: Iterable[dict], symbol: str, today: date) -> tuple[
             continue
         if parsed < today:
             continue
-        # A row carrying an actual EPS or a confirmed time has been reported or
-        # scheduled by the company; a bare estimate has neither.
-        confirmed = bool(
-            row.get("epsActual") is not None
-            or row.get("eps") is not None
-            or str(row.get("time") or "").lower() in ("bmo", "amc", "dmh")
-        )
+        confirmed = _confirmation(row)
         if best is None or parsed < best:
             best, best_confirmed = parsed, confirmed
     return (best.isoformat() if best else None, best_confirmed)
@@ -282,13 +335,36 @@ def evaluate_exclusion(
     buffer_sessions: int,
     max_cache_age_hours: float,
     require_confirmed: bool = False,
+    no_earnings: bool = False,
 ) -> EarningsVerdict:
     """Hold-window exclusion. Runs in code, before any model call, no override.
 
     Excludes any symbol whose next earnings date falls within
     ``max_hold_sessions + buffer_sessions`` trading sessions of the entry
     session. Every uncertain case excludes.
+
+    ``no_earnings`` marks an instrument declared in
+    ``config/universe.yaml: no_earnings`` as structurally print-free. Staleness
+    is not checked for those: the claim comes from the config, not from the
+    provider, so a stale fetch is not evidence against it. What *is* checked is
+    the contradiction -- a declared-print-free symbol carrying a real date means
+    the declaration is wrong, and a wrong declaration is more dangerous than a
+    missing one because it reads as deliberate.
     """
+    if no_earnings:
+        if entry is not None and entry.date is not None:
+            return EarningsVerdict(
+                symbol, True,
+                f"declared no-earnings but the provider returned {entry.date} -- "
+                f"remove it from universe.yaml: no_earnings",
+                earnings_date=entry.date, confirmed=entry.confirmed,
+                no_earnings_class=True,
+            )
+        return EarningsVerdict(
+            symbol, False, "no-earnings instrument, declared in universe.yaml",
+            no_earnings_class=True,
+        )
+
     if entry is None:
         return EarningsVerdict(symbol, True, "no earnings data for symbol")
 
@@ -305,10 +381,15 @@ def evaluate_exclusion(
             symbol, True, "no earnings date known", confirmed=entry.confirmed, age_hours=age
         )
 
-    if require_confirmed and not entry.confirmed:
+    if require_confirmed and entry.confirmed is not True:
+        detail = (
+            "the provider gave no confirmation signal"
+            if entry.confirmed is None
+            else "the provider marks it an estimate"
+        )
         return EarningsVerdict(
-            symbol, True, "earnings date is an estimate, not confirmed",
-            earnings_date=entry.date, confirmed=False, age_hours=age,
+            symbol, True, f"earnings date is not confirmed -- {detail}",
+            earnings_date=entry.date, confirmed=entry.confirmed, age_hours=age,
         )
 
     horizon = max_hold_sessions + buffer_sessions
@@ -335,6 +416,62 @@ def evaluate_exclusion(
         earnings_date=entry.date, confirmed=entry.confirmed,
         sessions_until=sessions_until, age_hours=age,
     )
+
+
+def assert_universe_resolves(
+    symbols: Sequence[str],
+    calendar: EarningsCalendar,
+    no_earnings_symbols: Iterable[str],
+    now: datetime,
+    max_cache_age_hours: float,
+) -> dict[str, str]:
+    """Every symbol must resolve to a real date or an explicit no-earnings claim.
+
+    Call this at startup, before the first session decision. The other
+    fail-closed rules make a broken feed *safe* -- an unknown date excludes, so
+    nothing trades on it. That safety is also what hides the break: a feed
+    returning nothing for every symbol looks exactly like a quiet week. This
+    assertion is the one place that refuses to accept silence as an answer.
+
+    Returns a ``{symbol: resolution}`` map on success. Raises
+    :class:`EarningsError` naming every symbol that resolved to neither, and
+    every declared no-earnings symbol contradicted by a real date.
+    """
+    declared = {s.strip().upper() for s in no_earnings_symbols}
+    resolved: dict[str, str] = {}
+    unresolved: list[str] = []
+    contradicted: list[str] = []
+
+    for symbol in (s.strip().upper() for s in symbols):
+        entry = calendar.get(symbol)
+        if symbol in declared:
+            if entry is not None and entry.date is not None:
+                contradicted.append(f"{symbol} (declared no-earnings, got {entry.date})")
+            else:
+                resolved[symbol] = "no_earnings_class"
+            continue
+        if entry is None:
+            unresolved.append(f"{symbol} (no entry -- never fetched)")
+        elif entry.date is None:
+            unresolved.append(f"{symbol} (fetched, no date returned)")
+        elif entry.is_stale(now, max_cache_age_hours):
+            unresolved.append(
+                f"{symbol} (data {entry.age_hours(now):.1f}h old, "
+                f"limit {max_cache_age_hours:.0f}h)"
+            )
+        else:
+            resolved[symbol] = "earnings_date"
+
+    problems = unresolved + contradicted
+    if problems:
+        raise EarningsError(
+            f"{len(problems)} of {len(list(symbols))} universe symbol(s) did not "
+            f"resolve to an earnings date or a declared no-earnings instrument: "
+            + "; ".join(problems)
+            + ". Refetch, or declare the instrument in universe.yaml: no_earnings. "
+            "Do not widen the exclusion to make this pass."
+        )
+    return resolved
 
 
 def spans_earnings(expiry: date, earnings: date | None) -> bool | None:

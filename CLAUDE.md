@@ -97,9 +97,9 @@ currently points at. `PA3KLBQXXYAO` is the competition account, separate login,
 
 `.env` holds Alpaca (dev, paper), Anthropic, and — once added — `FMP_API_KEY`.
 Validation is per consumer: broker steps do not need the Anthropic key, and
-neither needs FMP. **FMP_API_KEY is not yet set**, so the earnings exclusion
-cannot run; in live trading that state excludes every symbol, which is correct
-and deliberate.
+neither needs FMP. **FMP_API_KEY is set and the earnings exclusion is live**
+as of 23 Aug — verified against the real provider, not mocks. See the Earnings
+exclusion section for the endpoint trap that verification turned up.
 
 ### Things deliberately left undone
 
@@ -417,12 +417,51 @@ when the hold window is clear, prefer contracts whose expiry precedes the earnin
 the chosen DTE band makes that impossible, flag it: the contract is systematically more
 expensive than its realised volatility justifies, and `iv_vs_rv20` will show it.
 
-**The longer the DTE band, the more contracts span an earnings print** — a 4-month contract on
-almost any single name spans at least one.
+**3. Post-earnings IV crush (the mirror image, and the one that is easy to miss).** The two
+exclusions above both look *forward* to a print we might hold into. The risk does not end when
+the print does. Implied volatility is bid up into an earnings date and collapses within hours
+of it — frequently 30–50% of the pre-print IV on a single name. For a **long premium**
+strategy that collapse is a direct loss on every open contract, and it is uncorrelated with
+direction: the thesis can be right, the underlying can move the way we said, and the position
+still loses because the vega component reprices. A debit vertical is partly insulated — the
+short leg crushes too — which is one of the few cases where the vertical's four bid-ask
+crossings may be earned.
 
-**Data source.** Earnings dates are **not available from Alpaca's Trading API.** This gap is
-open and must be closed before Step 7 — the exclusion is worthless if the calendar is stale or
-missing. Fail closed: an unknown earnings date is treated as an earnings date.
+So the buffer is **two-sided**. Entering the session *after* a print is not a clean slate; it
+is the single worst moment to buy premium on that name. Exclude for a configured number of
+sessions *after* the earnings date as well as before it — `earnings.post_print_buffer_sessions`
+is the key that will hold it. Note this is a **buffer on new entries**, not an exit rule: a
+position already open through a print is governed by the deterministic exits, and the crush is
+one of the reasons the hold-window exclusion exists in the first place.
+
+**The longer the DTE band, the more contracts span an earnings print** — a 4-month contract on
+almost any single name spans at least one. Longer-dated contracts also carry more vega, so they
+absorb more of the crush.
+
+**Data source.** Earnings dates are **not available from Alpaca's Trading API.** They come from
+FMP via `src/earnings/calendar.py`. Fail closed: an unknown earnings date is treated as an
+earnings date.
+
+Two things about that provider, learned the expensive way on 2026-08-23 and enforced in code
+since:
+
+- **The endpoint must be symbol-scoped.** `/stable/earnings-calendar` accepts a `symbol`
+  parameter and silently ignores it, then caps the response to a slice of the requested range.
+  Filtering that client-side returns "the earliest row for this symbol that survived the cap",
+  which is not the symbol's next earnings date and is *indistinguishable from one*. It read no
+  date for NVDA three days before NVDA reported. Use `/stable/earnings?symbol=X`. The fetcher
+  now raises if a response contains no rows for the symbol it asked about.
+- **Fail-closed hides its own failure.** An unknown date excludes, so a completely dead feed
+  never places a bad trade — and therefore looks exactly like a quiet week. That is why
+  `assert_universe_resolves()` exists: every universe symbol must resolve to a real date or to
+  an explicit `no_earnings` declaration in `config/universe.yaml`, never silently to unknown.
+  Run `python -m cli.earnings_check` before any session that can place an order.
+
+**The `no_earnings` class.** Index and sector ETFs have no print, so rule 1 would block SPY and
+QQQ permanently behind a healthy-looking exclusion. They are declared in
+`config/universe.yaml: no_earnings`. It is a claim about the *instrument*, never a way to skip
+the check — a declared symbol that returns a real date is a contradiction and excludes loudly.
+Never resolve a missing date by adding the symbol to this list.
 
 ---
 
@@ -473,6 +512,22 @@ Runs after a deterministic prefilter. Reads headlines and numeric context; decid
 Enforced: non-empty `hard_blocks` → ineligible, no override; `event_risk: high` → ineligible;
 eligible set truncated to a configured maximum, ranked by `bias_strength`. Earnings proximity
 is filtered in code *before* the model is called.
+
+`iv_assessment` must account for **where the symbol sits relative to its earnings cycle, on
+both sides of the print** — this is prompt guidance, not a code constraint, because it is a
+judgment and the code has no business making it. Two symbols with identical `iv_vs_rv20` are
+not equally rich:
+
+- **Approaching a print** — IV is elevated because the market is pricing a known event. That is
+  not "rich", it is correctly priced, and the premium is unrecoverable for a directional
+  thesis that has nothing to do with the event. Read it as `rich` for our purposes and say why.
+- **Freshly past a print** — IV has crushed and screens as `cheap`. It usually is not. Realised
+  volatility collapses with it, and buying long premium into the post-print lull means paying
+  for movement that the calendar says will not arrive. `cheap` here should be justified against
+  something other than the IV percentile alone.
+
+The mechanical exclusion around the print is a code-side buffer and never a model call. What
+Agent 2 adds is the reading of what the level *means*, which no threshold captures.
 
 ### Agent 3 — Risk Allocator
 Base size is computed in code first. The model only scales it down.
