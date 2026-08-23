@@ -89,9 +89,9 @@ pretending the overnight gap cannot happen.
 
 ### Accounts
 
-See the Accounts section above. `PA3RQB0ZXDIA` is dev and is what `.env`
-currently points at. `PA3KLBQXXYAO` is the competition account, separate login,
-**untouched until 28 Aug**. The switch is a key change only.
+See the Accounts section below. `.env` currently points at the **dev** account.
+The competition account is a separate login and stays **untouched until
+28 Aug**. The switch is a key change only.
 
 ### Credentials
 
@@ -189,23 +189,28 @@ ANTHROPIC_API_KEY=
 
 Two Alpaca paper accounts, under **separate logins**:
 
-| Account | Role | Rule |
-| --- | --- | --- |
-| `PA3RQB0ZXDIA` | **Dev.** All building, testing, replay, and every round trip before the event. | Use freely. Reset it whenever a clean $100k is wanted. |
-| `PA3KLBQXXYAO` | **Competition.** | **Untouched until 28 Aug.** Do not point `.env` at it, do not read it, do not place a single order in it before the event. |
+| Role | Rule |
+| --- | --- |
+| **Dev.** All building, testing, replay, and every round trip before the event. | Use freely. Reset it whenever a clean $100k is wanted. |
+| **Competition.** | **Untouched until 28 Aug.** Do not point `.env` at it, do not read it, do not place a single order in it before the event. |
 
-The account number is a **submission field, not a runtime value**. It appears
-nowhere in source, config, or the committed history, and nothing branches on
-it — `account_summary()` reads `account.account_number` back from the live API
-purely for display. Switching accounts on 28 Aug is therefore a **key change
-only**: swap `ALPACA_API_KEY` and `ALPACA_SECRET_KEY` in `.env`, change
-nothing else. If a code change is ever needed to switch accounts, that is a
-bug in the config boundary.
+**The account numbers themselves are operator state and live outside the repo** —
+in the Alpaca dashboard and on the submission form. They are not in `.env`
+either: `.env` holds the key pair, and *which* account that pair addresses is a
+property of the keys, never a configured value. Nothing in source or config
+branches on an account number;
+`account_summary()` reads `account.account_number` back from the live API purely
+for display. Switching accounts on 28 Aug is therefore a **key change only**:
+swap `ALPACA_API_KEY` and `ALPACA_SECRET_KEY` in `.env`, change nothing else. If
+a code change is ever needed to switch accounts, that is a bug in the config
+boundary.
 
-Note that the Step 1 commit message (`8249cd3`) quotes account `PA3KLBQXXYAO`
-from a dry run made before the split was decided. The commit is not amended —
-rewriting history to fix a number in a message is not worth it — but the
-write-up must not copy that figure. Dev work belongs to `PA3RQB0ZXDIA`.
+Earlier commits do contain the two numbers, and this file quoted them until
+23 Aug. History is **deliberately not being rewritten**: a paper account number
+is not a credential — it is inert without the API keys — and a `filter-repo`
+rewrite is a disproportionate response that would invalidate every existing
+commit hash for no security gain. The rule going forward is that new work does
+not add them back.
 
 ## Directory layout
 
