@@ -315,7 +315,35 @@ in the write-up, not a bug to chase. Historical option data only exists from Feb
 
 ## DTE — measured, not assumed
 
-`dte_band_days` is configurable. **Do not fix it before the Monday measurement.**
+**Settled 24 Aug: the expiry is chosen, not bounded.** The rule is the nearest standard
+monthly expiry at least `prefilter.monthly_min_sessions` trading sessions out. A fixed
+calendar-day band was tried first and does not work: a 15-day-wide window inside a ~30-day
+monthly cycle misses the monthly roughly half the time. On 24 Aug a 30–45 day band fell
+entirely between the September monthly (25 days) and the October one (53 days), and requiring
+monthlies inside it produced an **empty survivor set on every symbol**. Anchoring on the
+expiry always lands on the liquid contract and can never empty.
+
+The cost is that **realised DTE varies per trade** — roughly `monthly_min_sessions` to
+`monthly_min_sessions + 21`. It is therefore a property of the entry, recorded on
+`PrefilterResult.target_session_dte` and in the logged thresholds, never assumed from config.
+`dte_min`/`dte_max` survive only as a guard envelope that raises if the chosen monthly falls
+outside it.
+
+**The knob, if realised DTE runs long.** `monthly_min_sessions` at 21 forced the 24 Aug
+selection out to the October monthly at **38 sessions / 53 calendar days**, because the
+September monthly sat at 18 sessions and missed the floor by three. Lowering the floor to
+**~14** would have admitted September and roughly halved realised DTE. That is the lever to
+reach for if DTE keeps landing at the long end — but it is a **measurement for later in the
+week, not a guess now**: a nearer monthly is cheaper in premium and vega and worse in theta,
+and which dominates over a 1–5 session hold is exactly the question the Monday sweep answered
+for buckets and has not yet answered for this rule. Do not change it without the numbers.
+
+**What follows is the bucket measurement that produced the rule above**, kept because it is
+the evidence and because the same columns are what any re-measurement must report. The bucket
+grid has one blind spot worth remembering: the October monthly the rule now selects sits at 53
+days, in the gap between the 30–45 and 60–90 buckets, so the grid never priced the contract
+the system actually buys. SPY looked unaffordable on bucket medians and clears comfortably at
+the chosen expiry.
 
 Run the comparison on SPY, NVDA and AMD across three buckets — 30–45, 60–90, 120+ days — and
 report, for a modelled 3-session hold:

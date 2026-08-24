@@ -1,0 +1,37 @@
+# universe.yaml for the OFFLINE TEST SUITE -- committed on purpose.
+#
+# Synthetic symbols, not the real universe. The real symbol list is part of
+# the edge and never enters the commit history; this file exists so a fresh
+# clone with no config/ directory can run every offline test.
+
+schema_version: 1
+
+symbols:
+  - SPY
+  - TESTA
+  - TESTB
+
+defaults:
+  enabled: true
+  max_concurrent_positions: 1
+  size_scalar: 1.0
+  min_underlying_price: 20.0
+  max_underlying_price: 1200.0
+  min_avg_daily_volume: 5000000
+  min_option_open_interest: 250
+  max_spread_pct_of_mid: 0.06
+  allowed_structures: ["single_leg", "debit_vertical"]
+  bar_timeframe: "5Min"
+  bar_lookback_days: 10
+
+overrides:
+  TESTA:
+    size_scalar: 0.8
+    max_spread_pct_of_mid: 0.03
+
+# SPY is a real index ETF and structurally print-free; the two synthetic names
+# are not declared, so the earnings paths still have both classes to exercise.
+no_earnings:
+  - SPY
+
+blacklist: []

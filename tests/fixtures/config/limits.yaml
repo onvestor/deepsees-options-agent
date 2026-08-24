@@ -1,0 +1,240 @@
+# limits.yaml for the OFFLINE TEST SUITE -- committed on purpose.
+#
+# Generated from config/limits.example.yaml with synthetic values. These are
+# NOT tuned thresholds and must never be synced with the operator's real
+# config/limits.yaml: the point is that the suite asserts against fixed
+# numbers that no tuning decision can move, and that a fresh clone with no
+# config/ directory can still run every offline test.
+#
+# tests/conftest.py points DEEPSEES_CONFIG_DIR here for non-live tests.
+schema_version: 1
+
+# --- Session windows (America/New_York) ------------------------------------
+session:
+  market_open_et: "09:30"          # "HH:MM"
+  market_close_et: "16:00"         # "HH:MM"
+  first_entry_et: "09:45"          # "HH:MM" -- no entries before this
+  last_entry_et: "15:30"           # "HH:MM" -- no new entries after this
+  flat_by_et: "15:55"              # "HH:MM" -- hard time-stop, all flat
+  skip_dates: []                        # list of "YYYY-MM-DD" to sit out
+
+# --- Two-tier cache (see CLAUDE.md: never a single 60s cache) --------------
+cache:
+  contracts_ttl_seconds: 900  # int, contract universe layer (~15 min)
+  quotes_ttl_seconds: 8  # int, quotes + greeks layer (5-10s)
+  contracts_max_entries: 64  # int, LRU bound on the universe tier
+  quotes_max_entries: 512  # int, LRU bound on the per-symbol tier
+
+# --- Broker behaviour ------------------------------------------------------
+broker:
+  data_feed_equities: "iex"      # "iex" on the Basic plan
+  data_feed_options: "indicative"       # "indicative" on the Basic plan
+  request_timeout_seconds: 10.0  # float
+  retry_attempts: 3  # int -- then halt new entries
+  backoff_base_seconds: 0.5  # float, exponential base
+  contracts_page_limit: 100  # int, <= 100 per Alpaca default
+  max_contract_pages: 50  # int, runaway-pagination backstop
+  snapshot_batch_size: 100  # int, symbols per snapshot request
+  require_paper_base_url: true          # bool -- refuse to arm against live
+
+# --- Deterministic chain prefilter (runs BEFORE any model call) ------------
+prefilter:
+  dte_min: 1  # int, TRADING SESSIONS to expiry (not calendar days)
+  dte_max: 45  # int, trading sessions
+  delta_min: 0.55  # float, absolute delta, single leg
+  delta_max: 0.75  # float, absolute delta, single leg
+  vertical_long_delta_min: 0.55  # float, vertical long leg
+  vertical_long_delta_max: 0.7  # float
+  vertical_short_delta_min: 0.25  # float, vertical short leg, further OTM
+  vertical_short_delta_max: 0.35  # float
+  min_open_interest: 250  # int
+  min_volume: 25  # int
+  max_spread_pct_of_mid: 0.06  # float, e.g. 0.05 == 5%
+  max_spread_abs: 0.35  # float, dollars per contract
+  min_bid: 0.3  # float, dollars
+  monthly_min_sessions: 1  # int, floor for the chosen monthly expiry
+  require_monthly_expiry: false  # bool, reject non-monthly expiries
+  prefer_monthly_expiry: false  # bool, rank monthlies above weeklies
+  strike_window_pct: 0.1  # float, +/- around spot. NARROWS the
+                                        #   universe BEFORE snapshots are
+                                        #   requested; greeks coverage is poor
+                                        #   in the wings and unusable anyway
+  max_survivors_per_symbol: 12  # int, cap handed to Agent 4
+  exclude_days_before_earnings: 3  # int -- filtered in code, pre-model
+
+# --- Signal engine (src/signals -- pure functions, no I/O) -----------------
+signals:
+  ema_slow: 21  # int, span of the slow EMA
+  atr_period: 14  # int, Wilder period
+  rsi_period: 14  # int, Wilder period
+  rsi_long_max: 70.0  # float, 0-100; above this, no long calls
+  rsi_short_min: 30.0  # float, 0-100; below this, no long puts
+  min_bars: 30  # int, warm-up before any signal is valid
+  vwap_session_anchored: true           # bool -- structural, keep true
+
+# --- Computed metrics: acceptance bands ------------------------------------
+metrics:
+  realized_vol_window_days: 20  # int, sessions for close-to-close RV
+  modeled_hold_hours: 18.0  # float, hold assumed by modeled P&L
+  theta_day_hours: 24.0  # float, hours per theta-day (24 =
+                                        #   calendar basis, as Alpaca quotes it)
+  breakeven_discount_k: 0.5  # float, how hard reward-to-risk is
+                                        #   discounted per ATR of breakeven
+                                        #   distance when ranking verticals
+  max_theta_pct_per_day: 0.05  # float, theta / premium
+  min_gamma: 0.001  # float
+  max_iv_vs_rv_ratio: 1.5  # float
+  max_spread_cost_pct_of_premium: 0.08  # float
+  max_breakeven_move_pct: 0.05  # float, underlying move to breakeven
+  min_modeled_pnl_ratio: 1.2  # float, modeled win / modeled loss
+
+# --- Sizing (computed in code, before any model sees it) -------------------
+sizing:
+  account_risk_pct_per_trade: 0.01  # float, fraction of equity
+  max_contracts_per_trade: 5  # int -- hard cap, always wins
+  max_premium_per_trade: 1500.0  # float, dollars
+  max_premium_pct_of_equity: 0.03  # float
+  min_contracts: 1  # int -- below this, no trade
+  round_direction: "down"         # "down" -- never round size up
+  assume_stop_gapped: true              # bool -- size assuming the overnight
+                                        #   gap can blow through the stop.
+                                        #   Structural for a swing hold.
+
+# --- Hard caps applied AFTER the model. Caps always win. -------------------
+caps:
+  max_concurrent_positions: 4  # int
+  max_positions_per_symbol: 1  # int
+  max_open_premium: 5000.0  # float, dollars across book
+  max_open_premium_pct_of_equity: 0.1  # float
+  max_entries_per_session: 8  # int
+  max_entries_per_symbol_per_session: 2  # int
+  min_minutes_between_entries: 5  # int
+
+# --- Kill switches. Fully deterministic; never consult a model. ------------
+killswitch:
+  daily_loss_halt_pct: 0.03  # float, fraction of start-of-day equity
+  daily_loss_halt_abs: 3000.0  # float, dollars
+  consecutive_losing_trades: 3  # int
+  broker_error_streak: 3  # int
+  max_session_drawdown_pct: 0.05  # float, from intraday equity peak
+  halt_resets_next_session: true        # bool
+
+# --- Deterministic exits. Always armed, independent of Agent 5. ------------
+exits:
+  stop_pct: -35.0  # float, negative, % of entry premium
+  target_pct: 60.0  # float, positive
+  trail_activate_pct: 40.0  # float, positive
+  trail_giveback_pct: 15.0  # float, positive
+  scale_out_fraction: 0.5  # float, 0.0-1.0
+  max_hold_minutes: 1950  # int
+  poll_interval_seconds: 30  # int -- spreads have no broker stop
+  vertical_exit_poll_seconds: 30  # int -- closing mleg loop cadence
+
+# --- Agent runtime, shared by the generic runner ---------------------------
+agent_runtime:
+  model: "claude-sonnet-5"                   # Anthropic model id
+  max_output_tokens: 1024  # int
+  temperature: 0.0  # float
+  timeout_seconds: 20.0  # float -- timeout on entry path = skip
+  max_validation_retries: 1  # int -- one retry, then fail closed
+  log_full_response: true               # bool -- decision log completeness
+
+# --- Per-agent thresholds --------------------------------------------------
+agents:
+
+  # Agent 1 -- Regime & Signal Profiler
+  a1:
+    cadence_seconds: 5  # int
+    confidence_floor: 0.5  # float, 0.0-1.0; below -> direction none
+    profile_lock_minutes: 5  # int -- anti-thrash
+    allowed_ema_fast: [8, 9, 10, 12]                # list[int] -- clamp target
+    allowed_confirmation_bars: [1, 2, 3]       # list[int] -- clamp target
+    min_atr_multiple_floor: 0.5  # float
+    min_atr_multiple_ceiling: 0.5  # float
+    force_none_regimes: ["choppy"]              # list[str] -- must include "choppy"
+
+  # Agent 2 -- Context & Eligibility
+  a2:
+    cadence_seconds: 5  # int
+    max_eligible_symbols: 5  # int -- truncate by bias_strength
+    min_bias_strength: 0.5  # float, 0.0-1.0
+    blocking_event_risk: []             # list[str] -- must include "high"
+    blocked_iv_assessments: []          # list[str]
+    headline_lookback_hours: 5  # int
+
+  # Agent 3 -- Risk Allocator
+  a3:
+    size_multiplier_min: 0.0            # structural floor -- never raise
+    size_multiplier_max: 1.0            # structural ceiling -- never raise
+    veto_below_multiplier: 0.5  # float -- below this, no trade at all
+
+  # Agent 4 -- Contract & Structure Selector
+  a4:
+    max_expected_hold_hours: 5  # int
+    allowed_structures: []              # list[str], debit only
+    vertical_min_width: 0.5  # float, strike width in dollars
+    vertical_max_width: 0.5  # float
+    vertical_min_iv_rank: 0.5  # float -- guidance threshold
+    require_same_expiry_legs: true      # bool -- structural, do not disable
+
+  # Agent 5 -- Exit Manager
+  a5:
+    cadence_seconds: 5  # int
+    min_stop_tightening_pct: 0.5  # float -- must be strictly tighter
+    max_stop_pct: 0.5  # float, negative -- absolute floor
+    allow_scale_out: true               # bool
+
+  # Agent 6 -- Nightly Reviewer
+  a6:
+    max_observations: 5  # int -- hard cap
+    max_observation_chars: 5  # int
+    max_expires_after_sessions: 5  # int
+    max_global_scope_observations: 5  # int
+
+# --- Step 1 broker round-trip spike ----------------------------------------
+# Temporary. Delete this section once the real order builder lands at Step 4;
+# it exists so the de-risking spike has no inline literals either.
+roundtrip:
+  option_type: "call"             # "call" or "put"
+  qty: 5  # int, whole contracts
+  target_delta: 0.5  # float, absolute
+  entry_limit_pad_pct: 0.5  # float, fraction above ask on entry
+  exit_limit_pad_pct: 0.5  # float, fraction below bid on exit
+  fill_timeout_seconds: 5  # int, then cancel and report
+  strike_window_pct: 0.5  # float, +/- around spot for the query
+
+# --- Earnings exclusion (provider: Financial Modeling Prep) ----------------
+# Fail closed everywhere: unknown, stale, or unreachable all mean "excluded".
+earnings:
+  provider: "fmp"                # "fmp"
+  base_url: "https://example.invalid"                # provider host
+  path: "/stable/earnings"                    # SYMBOL-SCOPED earnings path. A
+                                        #   market-wide calendar path that
+                                        #   ignores `symbol` will silently
+                                        #   return another company's dates.
+  request_timeout_seconds: 0.5  # float
+  max_rows: 5  # int, rows requested per symbol; the
+                                        #   provider tier may cap this
+  max_cache_age_hours: 0.5  # float -- older than this excludes
+  max_hold_sessions: 5  # int, matches the exit max hold
+  buffer_sessions: 5  # int, added to the hold window
+  post_print_buffer_sessions: 5  # int, sessions AFTER a print during
+                                        #   which we do not buy premium -- the
+                                        #   IV crush side. 0 disables the check
+                                        #   and the previous-date requirement
+                                        #   with it.
+  require_confirmed: false              # bool -- treat estimates as unknown
+
+# --- Decision log ----------------------------------------------------------
+decision_log:
+  filename: "decision_log.jsonl"                # e.g. "decision_log.jsonl"
+  rotate_daily: true                    # bool -- one file per session date
+  redact_env_keys: true                 # bool -- structural, never set false
+  fsync_every_record: false             # bool -- durability vs write latency
+  prefilter_detail: "boundary"        # "aggregate" | "boundary" | "full".
+                                        #   "boundary" keeps per-contract rows
+                                        #   only for the ranked set and
+                                        #   near-threshold rejects
+  near_boundary_pct: 0.5  # float, how close a single-reason
+                                        #   reject must be to count as boundary
+  max_response_chars: 5  # int -- truncate a runaway model reply

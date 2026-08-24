@@ -31,11 +31,35 @@ from src.risk.killswitch import (
 from src.risk.sizing import AccountState, SizingLimits, compute_size
 
 
+def _pinned(limits, **overrides):
+    """Limits with specific keys pinned, so tuning config cannot break tests.
+
+    The suite must assert against fixed numbers. Reading the operator's tuned
+    ``config/limits.yaml`` made every legitimate tuning decision a test
+    failure -- and those values are not even in a fresh clone.
+    """
+    from src.config import Section
+
+    data = limits.as_dict()
+    for dotted, value in overrides.items():
+        node = data
+        parts = dotted.split(".")
+        for part in parts[:-1]:
+            node = node.setdefault(part, {})
+        node[parts[-1]] = value
+    return Section(data, limits.source)
+
+
 @pytest.fixture(scope="module")
 def limits():
     from src.config import load_config
 
-    return SizingLimits.from_limits(load_config().limits)
+    # Pinned: the assertions below quote a 1% budget and a $1,500 premium cap.
+    return SizingLimits.from_limits(_pinned(
+        load_config().limits,
+        **{"sizing.account_risk_pct_per_trade": 0.01,
+           "sizing.max_premium_per_trade": 1500.0},
+    ))
 
 
 @pytest.fixture(scope="module")

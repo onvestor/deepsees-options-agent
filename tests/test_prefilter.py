@@ -32,9 +32,32 @@ JUST_OVER_BAND = round(DELTA_MAX * 1.05, 4)      # ~5% out: near-boundary
 FAR_OVER_BAND = round(min(0.99, DELTA_MAX * 1.35), 4)   # well out: not near
 
 SESSION = date(2026, 8, 24)
+# Must reach past the September monthly (2026-09-18): the prefilter now
+# CHOOSES the nearest monthly expiry rather than bounding a day window, and
+# sessions cannot be counted across days that were never fetched.
 SESSIONS = tuple(
-    SESSION + timedelta(days=d) for d in (0, 1, 2, 3, 4, 7, 8, 9, 10, 11, 14, 15, 16)
+    SESSION + timedelta(days=d)
+    for d in (0, 1, 2, 3, 4, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25)
 )
+
+
+def _pinned(limits, **overrides):
+    """Limits with specific keys pinned, so tuning config cannot break tests.
+
+    The suite must assert against fixed numbers. Reading the operator's tuned
+    ``config/limits.yaml`` made every legitimate tuning decision a test
+    failure -- and those values are not even in a fresh clone.
+    """
+    from src.config import Section
+
+    data = limits.as_dict()
+    for dotted, value in overrides.items():
+        node = data
+        parts = dotted.split(".")
+        for part in parts[:-1]:
+            node = node.setdefault(part, {})
+        node[parts[-1]] = value
+    return Section(data, limits.source)
 
 
 @pytest.fixture
@@ -49,10 +72,16 @@ def calendar():
 def limits():
     from src.config import load_config
 
-    return load_config().limits
+    # Pinned: these fixtures use a 1-session expiry and unmixed weeklies.
+    return _pinned(
+        load_config().limits,
+        **{"prefilter.dte_min": 1, "prefilter.dte_max": 45,
+           "prefilter.require_monthly_expiry": False,
+           "prefilter.prefer_monthly_expiry": False},
+    )
 
 
-def spec(symbol="SPY260825C00100000", strike=100.0, expiry=date(2026, 8, 25),
+def spec(symbol="SPY260918C00100000", strike=100.0, expiry=date(2026, 9, 18),
          option_type="call", open_interest=500, tradable=True) -> ContractSpec:
     return ContractSpec(
         symbol=symbol, underlying="SPY", root="SPY", expiry=expiry, strike=strike,
@@ -62,7 +91,7 @@ def spec(symbol="SPY260825C00100000", strike=100.0, expiry=date(2026, 8, 25),
     )
 
 
-def quote(symbol="SPY260825C00100000", bid=1.97, ask=2.03, delta=IN_BAND, gamma=0.04,
+def quote(symbol="SPY260918C00100000", bid=1.97, ask=2.03, delta=IN_BAND, gamma=0.04,
           theta=-0.20, iv=0.30) -> OptionQuote:
     """Default is a contract that passes every gate comfortably.
 
@@ -125,10 +154,10 @@ def test_all_failing_reasons_are_recorded_not_just_the_first(calendar, limits):
 
 def test_reason_counts_sum_above_rejected(calendar, limits):
     candidates = evaluate(
-        [spec(symbol="A" * 3 + "260825C00100000", open_interest=0),
-         spec(symbol="B" * 3 + "260825C00100000")],
-        [quote(symbol="A" * 3 + "260825C00100000", bid=0.01, ask=4.0),
-         quote(symbol="B" * 3 + "260825C00100000")],
+        [spec(symbol="A" * 3 + "260918C00100000", open_interest=0),
+         spec(symbol="B" * 3 + "260918C00100000")],
+        [quote(symbol="A" * 3 + "260918C00100000", bid=0.01, ask=4.0),
+         quote(symbol="B" * 3 + "260918C00100000")],
         calendar, limits,
     )
     payload = prefilter_payload(candidates, thresholds={}, detail="aggregate")
@@ -200,23 +229,23 @@ def test_multi_reason_rejects_have_no_boundary_distance(calendar, limits):
 
 
 def test_boundary_detail_keeps_only_near_misses_and_kept_symbols(calendar, limits):
-    near = spec(symbol="NEAR260825C00100000")
-    far = spec(symbol="FARX260825C00100000")
-    keep = spec(symbol="KEEP260825C00100000", open_interest=0)
+    near = spec(symbol="NEAR260918C00100000")
+    far = spec(symbol="FARX260918C00100000")
+    keep = spec(symbol="KEEP260918C00100000", open_interest=0)
     candidates = evaluate(
         [near, far, keep],
-        [quote("NEAR260825C00100000", delta=JUST_OVER_BAND),
-         quote("FARX260825C00100000", delta=FAR_OVER_BAND),
-         quote("KEEP260825C00100000", delta=FAR_OVER_BAND)],
+        [quote("NEAR260918C00100000", delta=JUST_OVER_BAND),
+         quote("FARX260918C00100000", delta=FAR_OVER_BAND),
+         quote("KEEP260918C00100000", delta=FAR_OVER_BAND)],
         calendar, limits,
     )
     payload = prefilter_payload(
         candidates, thresholds={}, detail="boundary",
-        near_boundary_pct=0.20, keep_symbols=["KEEP260825C00100000"],
+        near_boundary_pct=0.20, keep_symbols=["KEEP260918C00100000"],
     )
-    assert "NEAR260825C00100000" in payload.rejections     # near miss
-    assert "KEEP260825C00100000" in payload.rejections     # explicitly kept
-    assert "FARX260825C00100000" not in payload.rejections  # far miss, dropped
+    assert "NEAR260918C00100000" in payload.rejections     # near miss
+    assert "KEEP260918C00100000" in payload.rejections     # explicitly kept
+    assert "FARX260918C00100000" not in payload.rejections  # far miss, dropped
     # aggregates stay complete regardless of retention
     assert payload.rejected == 3
     assert sum(payload.reason_counts.values()) >= 3
@@ -298,7 +327,7 @@ def _as_api_snapshot(q: OptionQuote):
 def build_universe(n=30):
     specs, quotes = [], []
     for i in range(n):
-        symbol = f"SPY260825C{(95000 + i * 500):08d}"
+        symbol = f"SPY260918C{(95000 + i * 500):08d}"
         strike = (95000 + i * 500) / 1000
         specs.append(spec(symbol=symbol, strike=strike))
         # Vary the spread so ranking has something to discriminate on, while
@@ -308,11 +337,34 @@ def build_universe(n=30):
     return specs, quotes
 
 
+class _PinnedConfig:
+    """The real Config with a pinned limits Section.
+
+    ``run_prefilter`` reads ``clients.config.limits`` directly, so pinning the
+    ``limits`` fixture alone does not reach it. SESSIONS below is a hardcoded
+    13-session calendar, which cannot satisfy a 21-32 session band -- so the
+    band is pinned here rather than the calendar being regenerated per tuning.
+    """
+
+    def __init__(self, config, limits):
+        self._config = config
+        self.limits = limits
+
+    def __getattr__(self, name):
+        return getattr(self._config, name)
+
+
 @pytest.fixture
 def config():
     from src.config import load_config
 
-    return load_config()
+    real = load_config()
+    return _PinnedConfig(real, _pinned(
+        real.limits,
+        **{"prefilter.dte_min": 1, "prefilter.dte_max": 45,
+           "prefilter.require_monthly_expiry": False,
+           "prefilter.prefer_monthly_expiry": False},
+    ))
 
 
 def test_universe_is_narrowed_before_snapshots_are_requested(config, calendar):
@@ -332,14 +384,34 @@ def test_universe_is_narrowed_before_snapshots_are_requested(config, calendar):
     assert set(clients.snapshot_symbols) == {s.symbol for s in specs}
 
 
-def test_expiry_bounds_come_from_the_session_dte_band(config, calendar):
+def test_the_expiry_is_a_chosen_monthly_not_a_day_window(config, calendar):
+    """The rule changed: pick the nearest monthly at least N sessions out.
+
+    A fixed calendar-day window inside a ~30-day monthly cycle misses the
+    monthly about half the time -- on 2026-08-24 a 30-45 day band fell
+    entirely between the September and October monthlies and requiring
+    monthlies inside it produced an empty survivor set on every symbol.
+    """
+    from src.options.expiry import is_standard_monthly
+
     specs, quotes = build_universe()
     clients = FakeClients(config, specs, quotes)
-    run_prefilter(clients, "SPY", spot=100.0, atr=2.0, realized_vol=0.25,
-                  calendar=calendar, order_session=SESSION, option_type="call")
+    result = run_prefilter(clients, "SPY", spot=100.0, atr=2.0, realized_vol=0.25,
+                           calendar=calendar, order_session=SESSION, option_type="call")
     request = clients.contract_requests[0]
-    dte_min = config.limits.get_int("prefilter.dte_min")
-    assert request.expiration_date_gte == calendar.session_offset(SESSION, dte_min)
+
+    # One expiry is requested, not a range.
+    assert request.expiration_date_gte == request.expiration_date_lte
+    assert request.expiration_date_gte == result.target_expiry
+
+    # It is a real monthly, and it clears the configured floor.
+    assert is_standard_monthly(result.target_expiry, calendar.is_session)
+    floor = config.limits.get_int("prefilter.monthly_min_sessions")
+    assert result.target_session_dte >= floor
+    assert result.target_session_dte == calendar.sessions_until(result.target_expiry, SESSION)
+
+    # The realised DTE is recorded for the entry, never assumed from config.
+    assert result.thresholds["target_session_dte"] == float(result.target_session_dte)
 
 
 def test_survivors_are_ranked_by_pnl_to_spread_ratio(config, calendar):

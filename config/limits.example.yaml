@@ -43,8 +43,8 @@ broker:
 
 # --- Deterministic chain prefilter (runs BEFORE any model call) ------------
 prefilter:
-  dte_min: null                         # int, days to expiry
-  dte_max: null                         # int
+  dte_min: null                         # int, TRADING SESSIONS to expiry (not calendar days)
+  dte_max: null                         # int, trading sessions
   delta_min: null                       # float, absolute delta, single leg
   delta_max: null                       # float, absolute delta, single leg
   vertical_long_delta_min: null         # float, vertical long leg
@@ -56,6 +56,9 @@ prefilter:
   max_spread_pct_of_mid: null           # float, e.g. 0.05 == 5%
   max_spread_abs: null                  # float, dollars per contract
   min_bid: null                         # float, dollars
+  monthly_min_sessions: null            # int, floor for the chosen monthly expiry
+  require_monthly_expiry: null          # bool, reject non-monthly expiries
+  prefer_monthly_expiry: null           # bool, rank monthlies above weeklies
   strike_window_pct: null               # float, +/- around spot. NARROWS the
                                         #   universe BEFORE snapshots are
                                         #   requested; greeks coverage is poor

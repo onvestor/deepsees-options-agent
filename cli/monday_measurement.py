@@ -91,6 +91,14 @@ class Cell:
     vega_pct_of_premium: float | None = None
     median_premium_per_contract: float | None = None
     contracts_clearing_caps: int | None = None
+    monthly_survivors: int = 0
+    weekly_survivors: int = 0
+    oi_min: int | None = None
+    oi_median: float | None = None
+    oi_max: int | None = None
+    oi_clearing_500: int | None = None
+    spread_pct_median: float | None = None
+    spread_pct_max: float | None = None
     pct_spanning_earnings: float | None = None
     earnings_date: str | None = None
     earnings_known: bool = False
@@ -136,6 +144,7 @@ def measure_symbol(
     earnings: EarningsCalendar | None,
     sizing_limits: SizingLimits,
     account: AccountState,
+    monthly_only: bool = False,
 ) -> list[Cell]:
     config = clients.config
     limits = config.limits
@@ -204,7 +213,8 @@ def measure_symbol(
             swept = limits_with(
                 limits,
                 **{"prefilter.dte_min": 0, "prefilter.dte_max": 10_000,
-                   "prefilter.strike_window_pct": window},
+                   "prefilter.strike_window_pct": window,
+                   "prefilter.require_monthly_expiry": monthly_only},
             )
             candidates = evaluate_candidates(
                 specs, quotes, calendar, order_session, spot, atr, realized, swept
@@ -258,6 +268,18 @@ def measure_symbol(
             cell.vega_pct_of_premium = _median(vegas)
             cell.median_premium_per_contract = _median(premiums)
             cell.contracts_clearing_caps = clearing
+            cell.monthly_survivors = sum(1 for c in survivors if c.is_monthly)
+            cell.weekly_survivors = len(survivors) - cell.monthly_survivors
+            ois = [c.spec.open_interest for c in survivors]
+            if ois:
+                cell.oi_min, cell.oi_max = min(ois), max(ois)
+                cell.oi_median = _median([float(o) for o in ois])
+                cell.oi_clearing_500 = sum(1 for o in ois if o >= 500)
+            spreads = [c.quote.spread_pct_of_mid for c in survivors
+                       if c.quote.spread_pct_of_mid is not None]
+            if spreads:
+                cell.spread_pct_median = _median(spreads)
+                cell.spread_pct_max = max(spreads)
             cells.append(cell)
 
     return cells
@@ -281,6 +303,20 @@ def print_report(cells: list[Cell]) -> None:
                   f"{cell.greeks_coverage:>7.0%} {cell.survivors:>10} "
                   f"{fmt(cell.contracts_clearing_caps):>14}"
                   + (f"   [{cell.note}]" if cell.note else ""))
+
+    print("\n=== EXPIRY TYPE, OPEN INTEREST AND SPREAD (survivors) ===")
+    for symbol in dict.fromkeys(c.symbol for c in cells):
+        print(f"\n  {symbol}")
+        print(f"    {'bucket':<9}{'window':>7}{'surv':>6}{'mthly':>7}{'wkly':>6}"
+              f"{'OI min':>8}{'OI med':>8}{'OI max':>8}{'OI>=500':>9}"
+              f"{'spr med':>9}{'spr max':>9}")
+        for cell in (c for c in cells if c.symbol == symbol):
+            print(f"    {cell.bucket:<9}{cell.window_pct:>6.0%} {cell.survivors:>6}"
+                  f"{cell.monthly_survivors:>7}{cell.weekly_survivors:>6}"
+                  f"{fmt(cell.oi_min, '.0f'):>8}{fmt(cell.oi_median, '.0f'):>8}"
+                  f"{fmt(cell.oi_max, '.0f'):>8}{fmt(cell.oi_clearing_500, '.0f'):>9}"
+                  f"{fmt(cell.spread_pct_median, '.1%'):>9}"
+                  f"{fmt(cell.spread_pct_max, '.1%'):>9}")
 
     print("\n=== DTE BUCKET COMPARISON (median over survivors, 3-session hold) ===")
     for symbol in dict.fromkeys(c.symbol for c in cells):
@@ -309,6 +345,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", type=Path, help="write the raw cells here")
     parser.add_argument("--skip-earnings", action="store_true",
                         help="run without the earnings column (no FMP key)")
+    parser.add_argument("--monthly-only", action="store_true",
+                        help="restrict survivors to standard monthly expiries")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
 
@@ -352,7 +390,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"measuring {symbol} ...", flush=True)
         cells.extend(measure_symbol(
             clients, symbol, calendar, order_session, cache, earnings,
-            sizing_limits, account,
+            sizing_limits, account, monthly_only=args.monthly_only,
         ))
 
     print_report(cells)

@@ -34,10 +34,13 @@ from datetime import date
 from typing import Any, Iterable, Literal, Sequence
 
 from src.brokers.alpaca.cache import MarketDataCache
-from src.brokers.alpaca.calendar import TradingCalendar
+from src.brokers.alpaca.calendar import DteError, TradingCalendar
 from src.brokers.alpaca.client import AlpacaClients
 from src.brokers.alpaca.contracts import ContractSpec, fetch as fetch_contracts
 from src.brokers.alpaca.quotes import OptionQuote, fetch_snapshots
+from src.options.expiry import (
+    MONTHLY, WEEKLY, ExpiryType, classify, next_monthly_at_least,
+)
 from src.options.metrics import ContractMetrics, MetricError, compute_metrics
 
 log = logging.getLogger(__name__)
@@ -61,6 +64,7 @@ REASONS = (
     "no iv",
     "delta band",
     "session dte",
+    "weekly expiry",
     "expired",
     "not tradable",
     "unscoreable",
@@ -74,6 +78,7 @@ class Candidate:
     spec: ContractSpec
     quote: OptionQuote
     session_dte: int
+    expiry_type: ExpiryType = WEEKLY
     failures: tuple[str, ...] = ()
     metrics: ContractMetrics | None = None
     boundary_distance: float | None = field(
@@ -84,6 +89,10 @@ class Candidate:
     @property
     def symbol(self) -> str:
         return self.spec.symbol
+
+    @property
+    def is_monthly(self) -> bool:
+        return self.expiry_type == MONTHLY
 
     @property
     def survived(self) -> bool:
@@ -111,6 +120,8 @@ class PrefilterResult:
     top: tuple[Candidate, ...]
     narrowed_coverage: dict[str, Any]
     thresholds: dict[str, float]
+    target_expiry: date | None = None
+    target_session_dte: int | None = None
 
     @property
     def reason_counts(self) -> dict[str, int]:
@@ -174,6 +185,7 @@ def evaluate_candidates(
     delta_max = limits.get_float("prefilter.delta_max")
     dte_min = limits.get_int("prefilter.dte_min")
     dte_max = limits.get_int("prefilter.dte_max")
+    require_monthly = limits.get_bool("prefilter.require_monthly_expiry")
     hold_hours = limits.get_float("metrics.modeled_hold_hours")
     theta_day_hours = limits.get_float("metrics.theta_day_hours")
 
@@ -243,6 +255,14 @@ def evaluate_candidates(
         elif session_dte < dte_min or session_dte > dte_max:
             failures.append("session dte")
 
+        # Expiry type is a liquidity proxy, not a preference: at matched
+        # strikes a weekly can carry two orders of magnitude less open
+        # interest than the monthly beside it. Classified always, enforced
+        # only when configured.
+        expiry_type = classify(spec.expiry, calendar.is_session)
+        if require_monthly and expiry_type != MONTHLY:
+            failures.append("weekly expiry")
+
         metrics: ContractMetrics | None = None
         if not failures:
             try:
@@ -272,6 +292,7 @@ def evaluate_candidates(
                 spec=spec,
                 quote=quote,
                 session_dte=session_dte,
+                expiry_type=expiry_type,
                 failures=tuple(failures),
                 metrics=metrics,
                 boundary_distance=min(distances) if len(failures) == 1 and distances else None,
@@ -302,9 +323,26 @@ def run_prefilter(
     dte_max = limits.get_int("prefilter.dte_max")
     window = limits.get_float("prefilter.strike_window_pct")
     max_survivors = limits.get_int("prefilter.max_survivors_per_symbol")
+    prefer_monthly = limits.get_bool("prefilter.prefer_monthly_expiry")
 
-    expiry_gte = calendar.session_offset(order_session, dte_min)
-    expiry_lte = calendar.session_offset(order_session, dte_max)
+    # The expiry is chosen, not bounded. A fixed calendar-day window inside a
+    # ~30-day monthly cycle misses the monthly about half the time; anchoring
+    # on the nearest monthly at least `monthly_min_sessions` out always lands
+    # on the liquid contract. DTE therefore varies per trade and is recorded
+    # on the result rather than assumed from config.
+    target_expiry = next_monthly_at_least(
+        order_session,
+        limits.get_int("prefilter.monthly_min_sessions"),
+        lambda d: calendar.sessions_until(d, order_session),
+        calendar.is_session,
+    )
+    target_dte = calendar.sessions_until(target_expiry, order_session)
+    if target_dte < dte_min or target_dte > dte_max:
+        raise DteError(
+            f"{symbol}: nearest monthly {target_expiry} is {target_dte} sessions out, "
+            f"outside the guard band [{dte_min}, {dte_max}]. Refusing to scan."
+        )
+    expiry_gte = expiry_lte = target_expiry
     strike_gte = round(spot * (1.0 - window), 2)
     strike_lte = round(spot * (1.0 + window), 2)
 
@@ -314,6 +352,9 @@ def run_prefilter(
         option_type=option_type,
         strike_gte=strike_gte, strike_lte=strike_lte,
         cache=cache,
+    )
+    log.info(
+        "%s: target monthly expiry %s at %d sessions", symbol, target_expiry, target_dte,
     )
     log.info(
         "%s: narrowed universe %d contracts (%s..%s, strikes %.2f..%.2f = +/-%.0f%% of %.2f)",
@@ -338,8 +379,13 @@ def run_prefilter(
     candidates = evaluate_candidates(
         specs, quotes, calendar, order_session, spot, atr, realized_vol, limits
     )
+    # Monthly first when preferred, then modelled P&L per unit of spread
+    # cost within each group. A monthly never loses to a weekly on rank alone,
+    # because the weekly's edge is usually a quote that will not survive the
+    # round trip.
     survivors = tuple(sorted(
-        (c for c in candidates if c.survived), key=lambda c: -c.rank_key
+        (c for c in candidates if c.survived),
+        key=lambda c: (-(c.is_monthly and prefer_monthly), -c.rank_key),
     ))
 
     # Only the top N reach a prompt. More candidates makes a model's decision
@@ -361,10 +407,14 @@ def run_prefilter(
         survivors=survivors,
         top=top,
         narrowed_coverage=narrowed_coverage,
+        target_expiry=target_expiry,
+        target_session_dte=target_dte,
         thresholds={
             "strike_window_pct": window,
             "dte_min": float(dte_min),
             "dte_max": float(dte_max),
+            "monthly_min_sessions": float(limits.get_int("prefilter.monthly_min_sessions")),
+            "target_session_dte": float(target_dte),
             "delta_min": limits.get_float("prefilter.delta_min"),
             "delta_max": limits.get_float("prefilter.delta_max"),
             "min_open_interest": float(limits.get_int("prefilter.min_open_interest")),
@@ -372,5 +422,7 @@ def run_prefilter(
             "max_spread_pct_of_mid": limits.get_float("prefilter.max_spread_pct_of_mid"),
             "max_spread_abs": limits.get_float("prefilter.max_spread_abs"),
             "max_survivors_per_symbol": float(max_survivors),
+            "require_monthly_expiry": float(limits.get_bool("prefilter.require_monthly_expiry")),
+            "prefer_monthly_expiry": float(prefer_monthly),
         },
     )
