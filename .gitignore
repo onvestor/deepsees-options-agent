@@ -230,9 +230,22 @@ __marimo__/
 !.env.example
 
 # Tuned thresholds and the symbol universe.
-# NOTE: this MUST be `config/*`, not `config/`. An ignored *directory* is never
-# descended into by git, so a bare `config/` would make the negation below dead
-# and the committed example files unreachable.
+#
+# NOTE 1: this MUST be `config/*`, not `config/`. An ignored *directory* is
+# never descended into by git, so a bare `config/` would make the negation
+# below dead and the committed example files unreachable.
+#
+# NOTE 2: the pattern is ROOT-ANCHORED, and that is load-bearing. A gitignore
+# pattern containing a slash matches only from this file's directory, so
+# `config/*` hits ./config and NOT tests/fixtures/config/ -- which holds the
+# committed synthetic config the offline suite runs against. Rewriting this as
+# `config/` or `**/config/*` would match at any depth, silently stop
+# committing those fixtures, and break the guarantee that the suite passes on
+# a fresh clone with no config/ directory. The breakage is invisible until
+# someone clones. Verify with:
+#
+#   git check-ignore -v tests/fixtures/config/limits.yaml   # must find nothing
+#
 config/*
 !config/*.example.yaml
 
