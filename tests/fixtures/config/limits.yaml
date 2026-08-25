@@ -143,9 +143,9 @@ agents:
 
   # Agent 1 -- Regime & Signal Profiler
   a1:
-    cadence_seconds: 5  # int
+    run_at_et: "09:15"  # "HH:MM" ET, pre-market
     confidence_floor: 0.5  # float, 0.0-1.0; below -> direction none
-    profile_lock_minutes: 5  # int -- anti-thrash
+    profile_locked_for_session: true  # bool -- whole-session lock
     allowed_ema_fast: [8, 9, 10, 12]                # list[int] -- clamp target
     allowed_confirmation_bars: [1, 2, 3]       # list[int] -- clamp target
     min_atr_multiple_floor: 0.5  # float
@@ -154,7 +154,7 @@ agents:
 
   # Agent 2 -- Context & Eligibility
   a2:
-    cadence_seconds: 5  # int
+    run_at_et: "09:05"  # "HH:MM" ET, pre-market
     max_eligible_symbols: 5  # int -- truncate by bias_strength
     min_bias_strength: 0.5  # float, 0.0-1.0
     blocking_event_risk: []             # list[str] -- must include "high"
@@ -193,6 +193,9 @@ agents:
 # --- Step 1 broker round-trip spike ----------------------------------------
 # Temporary. Delete this section once the real order builder lands at Step 4;
 # it exists so the de-risking spike has no inline literals either.
+execution:
+  entry_reprice_cadence_seconds: 30  # int, synthetic
+
 roundtrip:
   option_type: "call"             # "call" or "put"
   qty: 5  # int, whole contracts

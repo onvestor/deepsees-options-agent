@@ -147,9 +147,11 @@ agents:
 
   # Agent 1 -- Regime & Signal Profiler
   a1:
-    cadence_seconds: null               # int
+    run_at_et: null                     # "HH:MM" ET, pre-market -- once per
+                                        #   session, NOT a polling interval
     confidence_floor: null              # float, 0.0-1.0; below -> direction none
-    profile_lock_minutes: null          # int -- anti-thrash
+    profile_locked_for_session: null    # bool -- lock the profile for the
+                                        #   whole session, NOT a minute count
     allowed_ema_fast: []                # list[int] -- clamp target
     allowed_confirmation_bars: []       # list[int] -- clamp target
     min_atr_multiple_floor: null        # float
@@ -158,7 +160,7 @@ agents:
 
   # Agent 2 -- Context & Eligibility
   a2:
-    cadence_seconds: null               # int
+    run_at_et: null                     # "HH:MM" ET, pre-market; before a1
     max_eligible_symbols: null          # int -- truncate by bias_strength
     min_bias_strength: null             # float, 0.0-1.0
     blocking_event_risk: []             # list[str] -- must include "high"
@@ -197,6 +199,13 @@ agents:
 # --- Step 1 broker round-trip spike ----------------------------------------
 # Temporary. Delete this section once the real order builder lands at Step 4;
 # it exists so the de-risking spike has no inline literals either.
+# --- Execution loops. Not agents; these are our own control cadences. ------
+execution:
+  entry_reprice_cadence_seconds: null   # int -- entry manager cancel/replace
+                                        #   clock. Must NOT reuse an agent
+                                        #   cadence: entry repricing and exit
+                                        #   management are tuned separately.
+
 roundtrip:
   option_type: "REPLACE_ME"             # "call" or "put"
   qty: null                             # int, whole contracts
