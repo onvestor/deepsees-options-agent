@@ -585,3 +585,76 @@ def test_a_symbol_with_no_previous_print_halts_the_session_when_the_buffer_is_on
                                  post_print_buffer_sessions=2)
     # ...and is silent about it when the buffer is off.
     assert assert_universe_resolves(["NVDA"], calendar, set(), NOW, 26.0)
+
+
+# --- declared no-earnings instruments are skipped inside refresh() ----------
+
+
+class _RecordingSession:
+    """Records which symbols were actually asked for, and 402s on ETFs."""
+
+    def __init__(self, etf_symbols=()):
+        self.asked: list[str] = []
+        self._etfs = {s.upper() for s in etf_symbols}
+
+    def get(self, url, timeout=None):
+        from urllib.parse import parse_qs, urlparse
+
+        symbol = parse_qs(urlparse(url).query)["symbol"][0].upper()
+        self.asked.append(symbol)
+
+        class _Response:
+            def __init__(self, status, payload):
+                self.status_code = status
+                self._payload = payload
+
+            def json(self):
+                return self._payload
+
+        if symbol in self._etfs:
+            # What FMP actually returns for IWM on this plan tier.
+            return _Response(402, {})
+        return _Response(200, [{"symbol": symbol, "date": "2026-11-03"}])
+
+
+def _calendar(tmp_path, no_earnings=(), etfs=()):
+    from src.earnings.calendar import EarningsCalendar
+
+    return EarningsCalendar(
+        api_key="test-key",
+        cache_path=tmp_path / "earnings.json",
+        base_url="https://example.invalid",
+        path="/stable/earnings",
+        timeout=1.0,
+        max_rows=10,
+        no_earnings=no_earnings,
+        session=_RecordingSession(etfs),
+    )
+
+
+def test_declared_no_earnings_symbols_are_never_fetched(tmp_path):
+    cal = _calendar(tmp_path, no_earnings=["SPY", "IWM"], etfs=["SPY", "IWM"])
+    cal.refresh(["SPY", "IWM", "AMD"])
+    assert cal._session.asked == ["AMD"]
+
+
+def test_an_undeclared_etf_still_fails_the_whole_refresh(tmp_path):
+    """The skip is a declaration, never a way to swallow a provider failure."""
+    from src.earnings.calendar import EarningsError
+
+    cal = _calendar(tmp_path, no_earnings=[], etfs=["IWM"])
+    with pytest.raises(EarningsError, match="IWM"):
+        cal.refresh(["IWM", "AMD"])
+
+
+def test_the_regression_this_fixes(tmp_path):
+    """Adding IWM to the universe blanked the earnings column for every symbol.
+
+    monday_measurement.py did not filter declared instruments, so it asked
+    about IWM, took a 402, and refresh() -- which refuses to return a partial
+    map -- failed the entire run. AMD's real date went missing with it.
+    """
+    cal = _calendar(tmp_path, no_earnings=["IWM"], etfs=["IWM"])
+    got = cal.refresh(["SPY", "NVDA", "AMD", "IWM"])
+    assert "IWM" not in got
+    assert cal.get("AMD") is not None and cal.get("AMD").as_date is not None

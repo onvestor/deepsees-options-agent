@@ -73,11 +73,10 @@ def main(argv: list[str] | None = None) -> int:
     now = datetime.now(tz=timezone.utc)
 
     if not args.no_refresh:
-        # Only the symbols that can actually have a print. Asking the provider
-        # about an ETF earns a 402 on this tier and tells us nothing either way.
-        wanted = [s for s in symbols if s not in no_earnings]
+        # Declared no-earnings instruments are skipped inside refresh(), so
+        # every caller gets that for free and none can forget it.
         try:
-            calendar.refresh(wanted)
+            calendar.refresh(symbols)
         except EarningsError as exc:
             log.error("refresh failed: %s", exc)
             return 3

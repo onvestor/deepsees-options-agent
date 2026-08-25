@@ -285,7 +285,7 @@ def measure_symbol(
     return cells
 
 
-def print_report(cells: list[Cell]) -> None:
+def print_report(cells: list[Cell], no_earnings: frozenset[str] = frozenset()) -> None:
     def fmt(value: Any, spec: str = ".2f") -> str:
         if value is None:
             return "    -"
@@ -332,11 +332,22 @@ def print_report(cells: list[Cell]) -> None:
                   f"{fmt(cell.median_premium_per_contract, '.0f'):>10} "
                   f"{fmt(cell.pct_spanning_earnings, '.0%'):>9}")
 
-    unknown = [c.symbol for c in cells if not c.earnings_known]
+    # A blank 'spans ER' means two entirely different things, and reporting
+    # them as one reads a healthy universe as a broken one: a declared
+    # print-free instrument has no date BY DEFINITION and trades normally,
+    # while a genuinely unknown date fails closed and excludes.
+    blank = {c.symbol for c in cells if not c.earnings_known}
+    declared = sorted(blank & no_earnings)
+    unknown = sorted(blank - no_earnings)
+    if declared:
+        print(f"\n  NOTE: {declared} are declared no-earnings instruments in "
+              "universe.yaml. Blank 'spans ER' is correct for them and they are "
+              "NOT excluded.")
     if unknown:
-        print(f"\n  NOTE: earnings date unknown for {sorted(set(unknown))} -- the "
-              "'spans ER' column is blank and those symbols would be EXCLUDED in "
-              "live trading (fail closed).")
+        print(f"\n  WARNING: earnings date unknown for {unknown} -- not declared "
+              "print-free either. The 'spans ER' column is blank and those symbols "
+              "WOULD BE EXCLUDED in live trading (fail closed). Run "
+              "`python -m cli.earnings_check` before trusting this run.")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -393,7 +404,7 @@ def main(argv: list[str] | None = None) -> int:
             sizing_limits, account, monthly_only=args.monthly_only,
         ))
 
-    print_report(cells)
+    print_report(cells, frozenset(config.universe.no_earnings_symbols))
 
     if args.json:
         args.json.write_text(

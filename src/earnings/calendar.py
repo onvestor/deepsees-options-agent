@@ -138,6 +138,7 @@ class EarningsCalendar:
         path: str,
         timeout: float,
         max_rows: int,
+        no_earnings: Iterable[str] = (),
         clock: Callable[[], datetime] | None = None,
         session: Any | None = None,
     ) -> None:
@@ -147,6 +148,12 @@ class EarningsCalendar:
         self.path = "/" + path.strip("/")
         self.timeout = timeout
         self.max_rows = max_rows
+        # Instruments declared print-free in universe.yaml. Held here rather
+        # than filtered by each caller: monday_measurement.py did not filter,
+        # asked the provider about IWM, took an HTTP 402, and -- because
+        # refresh() refuses to return a partial map -- blanked the earnings
+        # column for every symbol in the run. One code path, not two.
+        self.no_earnings = frozenset(s.strip().upper() for s in no_earnings if s)
         self._clock = clock or (lambda: datetime.now(tz=timezone.utc))
         self._session = session or requests
         self._entries: dict[str, EarningsEntry] = {}
@@ -164,6 +171,7 @@ class EarningsCalendar:
             path=limits.get_str("earnings.path"),
             timeout=limits.get_float("earnings.request_timeout_seconds"),
             max_rows=limits.get_int("earnings.max_rows"),
+            no_earnings=config.universe.no_earnings_symbols,
             **kwargs,
         )
 
@@ -217,7 +225,16 @@ class EarningsCalendar:
         results: dict[str, EarningsEntry] = {}
         failures: list[str] = []
 
-        for symbol in dict.fromkeys(s.strip().upper() for s in symbols if s):
+        wanted = dict.fromkeys(s.strip().upper() for s in symbols if s)
+        skipped = [s for s in wanted if s in self.no_earnings]
+        if skipped:
+            # Not an optimisation. An index ETF has no print to fetch, and on
+            # this provider tier asking earns an HTTP 402 that would fail the
+            # whole refresh.
+            log.info("skipping %d declared no-earnings symbol(s): %s",
+                     len(skipped), ", ".join(sorted(skipped)))
+
+        for symbol in (s for s in wanted if s not in self.no_earnings):
             try:
                 results[symbol] = self._fetch_one(symbol, fetched_at)
             except Exception as exc:  # noqa: BLE001 -- aggregated below
