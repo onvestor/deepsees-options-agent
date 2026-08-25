@@ -117,6 +117,9 @@ killswitch:
   broker_error_streak: 3  # int
   max_session_drawdown_pct: 0.05  # float, from intraday equity peak
   halt_resets_next_session: true        # bool
+  agent_failure_rate_pct: 0.2  # float
+  agent_failure_window_minutes: 60  # int
+  agent_failure_min_calls: 5  # int
 
 # --- Deterministic exits. Always armed, independent of Agent 5. ------------
 exits:
@@ -137,6 +140,8 @@ agent_runtime:
   timeout_seconds: 20.0  # float -- timeout on entry path = skip
   max_validation_retries: 1  # int -- one retry, then fail closed
   log_full_response: true               # bool -- decision log completeness
+  response_ngram_size: 8  # int
+  response_prompt_overlap_max: 0.25  # float
 
 # --- Per-agent thresholds --------------------------------------------------
 agents:
