@@ -169,7 +169,7 @@ agents:
 
   # Agent 4 -- Contract & Structure Selector
   a4:
-    max_expected_hold_hours: 5  # int
+    max_expected_hold_sessions: 5  # int, sessions -- NOT hours
     allowed_structures: []              # list[str], debit only
     vertical_min_width: 0.5  # float, strike width in dollars
     vertical_max_width: 0.5  # float
