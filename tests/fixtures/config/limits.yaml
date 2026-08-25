@@ -148,29 +148,29 @@ agents:
     profile_locked_for_session: true  # bool -- whole-session lock
     allowed_ema_fast: [8, 9, 10, 12]                # list[int] -- clamp target
     allowed_confirmation_bars: [1, 2, 3]       # list[int] -- clamp target
-    min_atr_multiple_floor: 0.5  # float
-    min_atr_multiple_ceiling: 0.5  # float
+    min_atr_multiple_floor: 0.3  # float
+    min_atr_multiple_ceiling: 1.5  # float
     force_none_regimes: ["choppy"]              # list[str] -- must include "choppy"
 
   # Agent 2 -- Context & Eligibility
   a2:
     run_at_et: "09:05"  # "HH:MM" ET, pre-market
-    max_eligible_symbols: 5  # int -- truncate by bias_strength
-    min_bias_strength: 0.5  # float, 0.0-1.0
-    blocking_event_risk: []             # list[str] -- must include "high"
-    blocked_iv_assessments: []          # list[str]
+    max_eligible_symbols: 3  # int -- truncate by bias_strength
+    min_bias_strength: 0.4  # float, 0.0-1.0
+    blocking_event_risk: ["high"]       # list[str] -- must include "high"
+    blocked_iv_assessments: ["rich"]    # list[str]
     headline_lookback_hours: 5  # int
 
   # Agent 3 -- Risk Allocator
   a3:
     size_multiplier_min: 0.0            # structural floor -- never raise
     size_multiplier_max: 1.0            # structural ceiling -- never raise
-    veto_below_multiplier: 0.5  # float -- below this, no trade at all
+    veto_below_multiplier: 0.25  # float -- below this, no trade at all
 
   # Agent 4 -- Contract & Structure Selector
   a4:
     max_expected_hold_sessions: 5  # int, sessions -- NOT hours
-    allowed_structures: []              # list[str], debit only
+    allowed_structures: ["single_leg", "debit_vertical"]  # list[str], debit only
     vertical_min_width: 0.5  # float, strike width in dollars
     vertical_max_width: 0.5  # float
     vertical_min_iv_rank: 0.5  # float -- guidance threshold
@@ -179,20 +179,18 @@ agents:
   # Agent 5 -- Exit Manager
   a5:
     cadence_seconds: 5  # int
-    min_stop_tightening_pct: 0.5  # float -- must be strictly tighter
-    max_stop_pct: 0.5  # float, negative -- absolute floor
+    min_stop_tightening_pct: 2.0  # float -- must be strictly tighter
+    max_stop_pct: -50.0  # float, negative -- absolute floor
     allow_scale_out: true               # bool
 
   # Agent 6 -- Nightly Reviewer
   a6:
-    max_observations: 5  # int -- hard cap
-    max_observation_chars: 5  # int
+    max_observations: 8  # int -- hard cap
+    max_observation_chars: 200  # int
     max_expires_after_sessions: 5  # int
-    max_global_scope_observations: 5  # int
+    max_global_scope_observations: 3  # int
 
-# --- Step 1 broker round-trip spike ----------------------------------------
-# Temporary. Delete this section once the real order builder lands at Step 4;
-# it exists so the de-risking spike has no inline literals either.
+# --- Execution loops -------------------------------------------------------
 execution:
   entry_reprice_cadence_seconds: 30  # int, synthetic
 

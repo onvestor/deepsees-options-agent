@@ -38,6 +38,7 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 __all__ = [
     "SCHEMA_VERSION",
     "AgentCallPayload",
+    "AgentOverridePayload",
     "CapOverridePayload",
     "DecisionRecord",
     "KillSwitchPayload",
@@ -154,7 +155,13 @@ class ValidationResult(_Base):
     errors: list[str] = Field(default_factory=list)
     clamps: list[dict[str, Any]] = Field(
         default_factory=list,
-        description="One entry per clamped field: {field, from, to, bound}.",
+        description=(
+            "One entry per override: {kind, field, model_value, applied_value, "
+            "rule}. `kind` is 'clamp' (the model returned an out-of-range value) "
+            "or 'force' (the value was valid and a rule overrode it). Both are "
+            "overrides; only 'clamp' means the model answered badly. Each also "
+            "appears as its own AgentOverridePayload record."
+        ),
     )
 
 
@@ -185,6 +192,37 @@ class AgentCallPayload(_Base):
     input_tokens: int | None = None
     output_tokens: int | None = None
     fallback_used: bool = False
+
+
+class AgentOverridePayload(_Base):
+    """One override applied to a model response. One record each.
+
+    The log must answer "what did the model say" separately from "what did the
+    system do", so both values are always present and neither is inferable
+    from the other.
+
+    ``override`` distinguishes two things that are easy to conflate:
+
+    * ``clamp`` -- the model returned a value outside an allowed range or set,
+      and it was moved to the nearest permitted one. This is evidence the model
+      answered badly.
+    * ``force`` -- the model returned a perfectly valid value and a rule
+      overrode it anyway (confidence below the floor, a regime on the forced
+      list). This says nothing about the model's output quality; it is the
+      system asserting policy.
+
+    Counting these together would make a well-behaved model on a choppy day
+    look identical to one emitting garbage.
+    """
+
+    kind: Literal["agent_override"] = "agent_override"
+    agent: Literal["a1_regime", "a2_context", "a3_risk", "a4_contract", "a5_exit", "a6_review"]
+    override: Literal["clamp", "force"]
+    field: str
+    model_value: Any = None
+    applied_value: Any = None
+    rule: str = Field(description="Config key or invariant that caused the override.")
+    detail: str = ""
 
 
 class SizingPayload(_Base):
@@ -248,6 +286,7 @@ Payload = Annotated[
         SignalEvalPayload,
         PrefilterPayload,
         AgentCallPayload,
+        AgentOverridePayload,
         SizingPayload,
         CapOverridePayload,
         KillSwitchPayload,
