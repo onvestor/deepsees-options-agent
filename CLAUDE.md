@@ -413,6 +413,23 @@ options feed, taken in one session. Direction and magnitude are evidence; they a
 substitute for the same measurement against a live-money fill engine, and the write-up should
 say so.
 
+## Universe screening — 25 Aug, 48 symbols
+
+**Nine sector ETFs returned zero survivors** — XLK, XLV, XLI, XLY, XBI, XOP, IYR, EFA and IJR
+— despite each having 21–34 contracts inside the strike window and no earnings risk at all.
+They have the strikes and they have the no-print advantage; their options simply do not clear
+the delta and liquidity gates. **ETF safety does not generalise past the big three index
+funds.** SPY, QQQ and IWM are not representative of "ETFs" as a class, and a sector fund should
+never be added on the assumption that it inherits their liquidity. Measure it first.
+
+**Data coverage disqualifies symbols that liquidity would have accepted.** FMP returns HTTP 402
+on this plan tier for CRM, ORCL, QCOM and SPCX. Their earnings dates are unavailable, the
+earnings rule fails closed, and declaring a single name in `no_earnings` would be a lie of
+exactly the kind that section forbids — so they cannot be traded regardless of how good the
+contract is. ORCL was the single best contract in the whole screen (OI 8,029 at a 1.3% spread)
+and is unusable. **The binding constraint on universe expansion is the earnings feed, not the
+prefilter thresholds.**
+
 ## Delta bands
 
 | Structure | Leg | Band |
