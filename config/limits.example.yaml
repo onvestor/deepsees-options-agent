@@ -206,6 +206,44 @@ execution:
                                         #   cadence: entry repricing and exit
                                         #   management are tuned separately.
 
+  # --- Entry lifecycle. See CLAUDE.md "Entry order management". -----------
+  entry_active_window_seconds: null     # int -- phase 1 duration; steps from
+                                        #   mid toward ask inside this window
+  entry_step_pct_of_spread: null        # float -- size of one step, as a
+                                        #   fraction of the quoted spread
+
+  # The step CEILING is derived per contract, never configured: step only
+  # while modelled reward-to-risk stays above the value that qualified the
+  # candidate. This is the floor on that ratio, not a price bound -- a
+  # high-edge contract absorbs more spread than a marginal one.
+  entry_min_reward_to_risk: null        # float -- stop stepping below this
+
+  # --- Displacement. Capacity-driven, never staleness-driven. -------------
+  # The underlying moving away means the signal was RIGHT and the entry was
+  # missed; it is not grounds for cancellation. Orders are displaced only
+  # when cap headroom is full and a new signal needs the slot.
+  displacement_order: null              # list[str] -- evaluated in order.
+                                        #   Default: ["price_moved",
+                                        #   "weakest_conviction", "oldest"].
+                                        #   "worst_current_edge" is available
+                                        #   and must stay OUT until the edge
+                                        #   model is validated against
+                                        #   realised outcomes.
+  displacement_price_move_pct: null     # float -- move from placement price
+                                        #   that makes a resting price stale
+
+  # --- Hard bounds. Apply regardless of displacement ordering. ------------
+  pending_max_sessions: null            # int -- a pending order expires
+  # A resting order must always be for a contract the prefilter would still
+  # select today. The monthly target rolls forward, so this is not optional.
+  cancel_outside_current_dte_band: null # bool -- keep true
+
+  # --- Cancellation race. -------------------------------------------------
+  cancel_confirm_timeout_seconds: null  # int -- poll a cancel to a terminal
+                                        #   status before replacing. A cancel
+                                        #   returning already-filled is a real
+                                        #   position and REDUCES headroom.
+
 roundtrip:
   option_type: "REPLACE_ME"             # "call" or "put"
   qty: null                             # int, whole contracts

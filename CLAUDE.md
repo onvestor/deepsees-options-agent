@@ -468,6 +468,101 @@ frame passed in and the cadence of evaluation change.
 
 ---
 
+## Entry order management — designed, not built
+
+**Status: specification only.** No code exists for this. It is recorded here because the design
+decisions are the valuable part and several of them are counter-intuitive.
+
+Exits are **not** managed by this loop. They keep the stepped-limit path, whose urgency is keyed
+to the exit reason. Entry repricing and exit management are tuned separately and must never
+share a cadence key — see `execution.entry_reprice_cadence_seconds`.
+
+### Why passive entries at all
+
+The 25 Aug fill study measured mid limits on both sides: buys filled 55%, sells 18%, and the
+distribution is **bimodal, not gradual** — six of eight fills landed under a second and nothing
+filled between 11s and 60s. Patience at a fixed price buys almost nothing. That is the whole
+justification for stepping rather than resting, and for stepping *early*.
+
+### Phase 1 — active window (~5 minutes)
+
+Small steps from the mid toward the ask.
+
+**The step cap is derived, never a fixed number of ticks or a fixed fraction of the spread.**
+Step only while the trade's modelled reward-to-risk stays above the threshold that qualified
+it as a candidate in the first place. Recompute at every step: both breakeven distance and
+modelled P&L degrade as the entry price rises, so the ceiling is a property of the individual
+contract, not of the chain.
+
+The consequence is the point: **a high-edge contract can absorb more spread than a marginal
+one.** Stop stepping when the trade stops being worth taking at that price — which is a
+different price for every candidate, and the only honest definition of "too far".
+
+### Phase 2 — pending
+
+Rests unchased until filled or displaced. No repricing, no chasing.
+
+### Displacement is capacity-driven, never staleness-driven
+
+**The underlying moving away is not a reason to cancel.** On a multi-session swing thesis, the
+underlying moving in the direction we predicted means the signal was *correct* and the entry
+was missed. Cancelling there would systematically discard the theses that were right — the
+exact inversion of what an entry manager is for.
+
+So:
+
+- **If cap headroom remains, keep every pending order and add the new one.** Nothing is
+  displaced merely because something newer arrived.
+- **Only when headroom is full** does a new signal displace an existing pending order.
+
+### Which pending order gets cancelled
+
+A **configurable ordered list**, evaluated in order. Default:
+
+1. **price moved beyond a configured threshold from placement** — not staleness, but a
+   quantified move that says the resting price is no longer meaningful
+2. **weakest conviction** — Agent 1 confidence × Agent 2 bias strength
+3. **oldest**
+
+**`worst_current_edge` is implemented but OFF by default, deliberately.** The edge model is
+what drove the DTE decision, and it has never been validated against realised outcomes — only
+against its own internal consistency. Letting it silently rank live orders would give an
+unvalidated model authority over real cancellations, and its errors would be invisible because
+the counterfactual is never observed. It stays available and stays off until it has been
+checked against realised P&L. **Turning it on is a decision that requires that evidence
+first.**
+
+### Two hard bounds, regardless of the ordering above
+
+1. **A pending order expires after a configured number of sessions.**
+2. **A pending order is cancelled if its contract falls outside the prefilter's current
+   monthly/DTE band.**
+
+The second is the load-bearing one: **a resting order must always be for something the
+prefilter would still select today.** The expiry rule chooses the nearest standard monthly at
+least `monthly_min_sessions` out, and that target rolls forward as sessions pass. An order left
+resting across a roll would be an order for a contract the system would no longer choose —
+holding it because it was valid when placed is exactly the drift these bounds exist to prevent.
+
+### Cancellation is asynchronous, and the race is real
+
+No replacement order is placed until every outstanding cancel is **confirmed dead** — polled to
+a terminal status, not assumed from the cancel call returning.
+
+**A cancel that returns already-filled reduces the headroom for the new batch.** That fill is a
+real position; treating the cancel as successful and placing the replacement anyway would open
+one more position than the caps allow. Headroom is therefore recomputed from **reconciled
+broker state** after cancellation completes, never from local tracking — local counters are
+exactly what the race corrupts.
+
+### Configuration
+
+Every threshold above is configurable and **all of them are currently unset**, under
+`execution:` in `config/limits.yaml` with names in `limits.example.yaml`. Reading an unset key
+raises `ConfigError` naming it, so the entry manager cannot start half-configured. They are
+unset rather than defaulted because each is a policy choice this project has not yet earned the
+evidence to make — the fill study constrains the cadence, and nothing yet constrains the rest.
+
 ## Exits
 
 Deterministic exits, always armed, independent of any model:
