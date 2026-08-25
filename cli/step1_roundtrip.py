@@ -199,7 +199,6 @@ def build_candidates(
     min_oi = cfg.limits.get_int("prefilter.min_open_interest")
     min_bid = cfg.limits.get_float("prefilter.min_bid")
     max_spread_pct = cfg.limits.get_float("prefilter.max_spread_pct_of_mid")
-    max_spread_abs = cfg.limits.get_float("prefilter.max_spread_abs")
     delta_min = cfg.limits.get_float("prefilter.delta_min")
     delta_max = cfg.limits.get_float("prefilter.delta_max")
     dte_min = cfg.limits.get_int("prefilter.dte_min")
@@ -232,7 +231,7 @@ def build_candidates(
             failures.append("open interest")
 
         mid = (bid + ask) / 2.0
-        if mid <= 0 or (ask - bid) > max_spread_abs or (ask - bid) / mid > max_spread_pct:
+        if mid <= 0 or (ask - bid) / mid > max_spread_pct:
             failures.append("spread")
 
         if greeks is None:

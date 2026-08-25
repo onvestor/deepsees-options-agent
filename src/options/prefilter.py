@@ -180,7 +180,6 @@ def evaluate_candidates(
     min_volume = limits.get_int("prefilter.min_volume")
     min_bid = limits.get_float("prefilter.min_bid")
     max_spread_pct = limits.get_float("prefilter.max_spread_pct_of_mid")
-    max_spread_abs = limits.get_float("prefilter.max_spread_abs")
     delta_min = limits.get_float("prefilter.delta_min")
     delta_max = limits.get_float("prefilter.delta_max")
     dte_min = limits.get_int("prefilter.dte_min")
@@ -221,17 +220,15 @@ def evaluate_candidates(
         if spread is None or spread_pct is None:
             if "crossed/empty quote" not in failures:
                 failures.append("spread")
-        else:
-            over_abs = spread > max_spread_abs
-            over_pct = spread_pct > max_spread_pct
-            if over_abs or over_pct:
-                failures.append("spread")
-                distances.append(
-                    min(
-                        _bounded_ratio(spread, max_spread_abs),
-                        _bounded_ratio(spread_pct, max_spread_pct),
-                    )
-                )
+        elif spread_pct > max_spread_pct:
+            # Percentage only. A dollar cap scales with nothing: at 37 DTE and
+            # 0.55-0.75 delta the premiums here are $15-$55, so a $0.35 cap
+            # rejected 1.0-2.6% quotes -- 54 contracts on SPY, 15 on IWM, and
+            # every survivor AMD had. Measured 2026-08-25: across three
+            # symbols exactly one contract failed the percentage test alone,
+            # so the dollar cap was the entire filter and it was the wrong one.
+            failures.append("spread")
+            distances.append(_bounded_ratio(spread_pct, max_spread_pct))
 
         if quote.delta is None:
             # Hard reject. Never defaulted, never inferred from moneyness.
@@ -420,7 +417,6 @@ def run_prefilter(
             "min_open_interest": float(limits.get_int("prefilter.min_open_interest")),
             "min_bid": limits.get_float("prefilter.min_bid"),
             "max_spread_pct_of_mid": limits.get_float("prefilter.max_spread_pct_of_mid"),
-            "max_spread_abs": limits.get_float("prefilter.max_spread_abs"),
             "max_survivors_per_symbol": float(max_survivors),
             "require_monthly_expiry": float(limits.get_bool("prefilter.require_monthly_expiry")),
             "prefer_monthly_expiry": float(prefer_monthly),

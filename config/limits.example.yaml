@@ -54,7 +54,6 @@ prefilter:
   min_open_interest: null               # int
   min_volume: null                      # int
   max_spread_pct_of_mid: null           # float, e.g. 0.05 == 5%
-  max_spread_abs: null                  # float, dollars per contract
   min_bid: null                         # float, dollars
   monthly_min_sessions: null            # int, floor for the chosen monthly expiry
   require_monthly_expiry: null          # bool, reject non-monthly expiries

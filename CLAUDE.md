@@ -372,6 +372,47 @@ spreads both bite there.
 
 ---
 
+## Realised friction — measured 25 Aug, 20 round trips
+
+Every friction metric in `src/options/metrics.py` is computed from the **quoted** spread.
+Whether that predicts what a round trip actually costs was an open assumption until it was
+measured: 20 round trips, one contract each, across SPY, IWM and AMD on the dev paper account.
+
+| | quoted median | realised median | ratio (median) |
+|---|---|---|---|
+| SPY | 1.07% | 0.94% | 0.8x |
+| IWM | 1.43% | 1.51% | 1.1x |
+| AMD | 1.09% | 1.90% | 2.0x |
+| **all** | **1.30%** | **1.49%** | **1.0x** |
+
+Realised round trip: mean 1.41%, median 1.49%, range 0.34%–2.81%, sd 0.58% of premium.
+
+**The population conclusion: quoted spread is approximately unbiased.** It understates realised
+cost by roughly **15%**, not by an order of magnitude. A modest haircut on the friction metrics
+is defensible; anything larger is not supported by this data.
+
+**The per-trade conclusion is different and matters more.** The realised/quoted ratio spans
+**0.3x to 8.3x** across twenty trades. Quoted spread predicts *population* cost well and
+*individual* cost badly. Never treat a single contract's quoted spread as its expected cost.
+
+**Why the Step 1 round trip looked like 8–10x, and why that was misleading.** Step 1 filled a
+contract whose quoted spread was $0.01 — the tightest in any sample here. The ratio is a
+fraction with a tiny denominator, so it exploded; its *realised* cost was 0.78%, better than
+the median above. The generalisation from that single trade was wrong. **The ratio is an
+unstable statistic whenever the quoted spread is small, and should never be reasoned from at
+n=1.** Report realised cost in absolute percentage-of-premium terms, which is stable.
+
+**Per-name calibration beats one global factor.** AMD was the outlier that mattered — quoted
+understated realised by 2x consistently, worst single trip 2.81%. It has since been dropped
+from the universe for being structurally unaffordable at this delta band, but the lesson
+stands: a name whose quoted spreads systematically understate is a name to measure before
+trusting, not to average into a universe-wide constant.
+
+**Caveats, stated plainly.** These are paper fills against Alpaca's simulator on the indicative
+options feed, taken in one session. Direction and magnitude are evidence; they are not a
+substitute for the same measurement against a live-money fill engine, and the write-up should
+say so.
+
 ## Delta bands
 
 | Structure | Leg | Band |
