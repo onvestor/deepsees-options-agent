@@ -22,98 +22,115 @@ Three design consequences follow from the horizon, and must not drift:
 
 ---
 
-## Session handoff — 22 Aug 2026
+## Session handoff — 26 Aug 2026
 
-State at the end of the first build session. Read this first.
+State at the end of the third build session. Read this first.
 
 ### Build status
 
 | Step | State |
 | --- | --- |
 | 0 — Repo hygiene | Done. `fedf4d2` |
-| 1 — Broker round trip | **Code complete, UNVERIFIED.** `8249cd3`. Every read path proven; no order has ever been placed. Needs a regular session. |
+| 1 — Broker round trip | **VERIFIED 25 Aug.** A full open→close cycle placed on the dev account: entry filled 74 ms, exit 51 ms, position read-back matched, closed clean. |
 | 2 — OCC, contracts, quotes, cache | Done. `7f7dfd6` |
-| 3 — Signal engine | Done. `5f424ef`. Timeframe-agnostic; the swing revision changes only the bar frame and cadence, not this code. |
-| 4 — Prefilter + metrics | Done. `e01d264`, extended by `06dc7fa` (vertical metrics). |
+| 3 — Signal engine | Done. `5f424ef`. Timeframe-agnostic. |
+| 4 — Prefilter + metrics | Done, then substantially revised: monthly-anchored expiry selection (`13298c8`), expiry-type awareness, spread filter rebuilt (`09868fa`). |
 | 5 — Risk engine | Done. `ae38523` |
-| 6 — Decision logger | Done. `bd94998` (built early, deliberately). |
-| 7 — Agent layer | **Not started.** Blocked on the DTE decision and the earnings key. |
+| 6 — Decision logger | Done. `bd94998`, extended with `AgentOverridePayload` (`31d686b`). |
+| 7 — Agent layer | **Plumbing and all six agents done. No prompts.** See below. |
 | 8 — Replay harness | Not started. |
 | 9 — Orchestrator, CLI, dashboard | Not started. |
 
-~1190 offline tests, 10 live (`pytest -m live`). The suite is offline by default.
+~1,497 offline tests, 10 live. The suite runs with **`config/` absent** — verified by moving
+it aside — so a fresh clone can run everything offline.
 
-### Open questions — both decided by Monday's measurement, neither by opinion
+### Step 7 — what exists and what does not
 
-Run `python -m cli.monday_measurement --json out.json` during the session. It
-sweeps three DTE buckets x three strike windows across SPY, NVDA and AMD.
+| Piece | State |
+| --- | --- |
+| `schemas.py` | Done. `bae776d`. Six contracts; widening and size-increase unrepresentable. |
+| `validator.py` | Done. `31d686b`. Parse, clamp, force, retry once, skip. |
+| `runner.py` | Done. `8ef4348`. Path-aware timeouts, hashed prompts, restatement backstop, failure-rate counter. |
+| `prompt_loader.py` | Done. `$field` substitution, missing field raises. |
+| Agent 1 — regime | Done. `77a51ec`. Session-locked. |
+| Agent 2 — context | Done. `5df9b15`. Earnings filter ahead of the model. |
+| Agent 4 — contract | Done. `6b0dd76`. Survivor-set bound, visible fallback. |
+| Agent 3 — risk | Done. `69f4d82`. Shrink only, caps after. |
+| Agent 5 — exit | Done. `2a6e84e`. Failure continues; `tightens()` gates every stop. |
+| Agent 6 — review | Done. Observations are text only. |
+| End-to-end pipeline test | Done. All six wired against stubs. |
+| **Prompts** | **NONE. Not one of the six has a prompt.** |
 
-**1. DTE band.** Deliberately NOT fixed. `prefilter.dte_min/max` still hold
-intraday-era values (1–10 sessions) and are wrong for a 1–5 session swing hold.
-The measurement decides the band; total friction per unit of delta is the
-number that decides it, not theta alone.
+**No agent has a prompt.** Every module loads its prompt by name from the gitignored
+`prompts/` and fails with a message naming the file when it is absent. All six are tested
+against stub transports, so the wiring is proven independently of prompt quality — which was
+the point of doing it in this order. A wiring bug and a prompt bug look identical from
+outside; when prompts arrive, any failure is attributable to them.
 
-**2. Strike window.** `prefilter.strike_window_pct` is 0.10. After the delta
-band moved to 0.55–0.75 the survivor set fell to 8 on SPY and 5 on NVDA, which
-is too thin for Agent 4 to make a real choice. The sweep says whether widening
-recovers candidates.
+Prompt files needed, by name: `a1_regime.txt`, `a2_context.txt`, `a3_risk.txt`,
+`a4_contract.txt`, `a5_exit.txt`, `a6_review.txt`. Each module's `as_fields()` lists exactly
+the `$placeholders` its template may reference; an unknown one raises rather than rendering.
 
-**Early signal from a Friday-close smoke run — treat as a hypothesis, not a
-result.** Survivor counts did not move at all across ±10/15/20% on SPY, which
-suggests the binding constraint is spread and open interest rather than the
-strike window. If Monday reproduces that, widening the window is not the fix.
+### Entry order manager — designed, not built
 
-**A third question the smoke run raised, unprompted.** At `metrics` DTE of
-30–45 days the median contract cost $1,351 and at 120+ days $3,197. With
-`sizing.account_risk_pct_per_trade` at 0.01 and `assume_stop_gapped` on, the
-risk budget is $1,000 against a $1,351 risk-per-contract — **zero contracts
-clear the caps in every bucket.** The strategy revision predicted the capital
-constraint would bind; it binds harder than expected. Either
-`account_risk_pct_per_trade` rises toward the revision's 5%-of-equity figure,
-or the DTE band must be short enough to keep premiums affordable. Do not
-resolve this by turning off `assume_stop_gapped` — that sizes larger by
-pretending the overnight gap cannot happen.
+Specified in full under "Entry order management" in this file. **No code exists.** Every
+threshold is declared in `limits.example.yaml` under `execution:` and left unset, so reading
+one raises `ConfigError` naming the key and the manager cannot start half-configured.
 
-### Monday queue, in order
+The design decisions worth not rediscovering: the step ceiling is derived per contract from
+whether the trade is still worth taking at that price, displacement is capacity-driven rather
+than staleness-driven, and `worst_current_edge` stays off until the edge model is validated
+against realised outcomes.
 
-1. **10:30 ET — greeks probe** on SPY and NVDA, before anything else. Baseline
-   to beat: inside the narrowed window, SPY 78% and NVDA 99% coverage; on a
-   wide chain, 58% and 47%. The result decides whether the hard reject on
-   missing delta removes a residue or a third of the chain.
-2. **Run the measurement harness.** Answers the DTE band, the strike window,
-   and the sizing question above.
-3. **Step 1 live round trip** — `python -m cli.step1_roundtrip --symbol SPY`,
-   no `--dry-run`. First real order this project has placed. `ALPACA_MOCK` must
-   be falsy or every write raises by design.
-4. Then Step 7.
+### Remaining work, in order
+
+1. **Prompts for the six agents.** The contracts are stable and stub-tested; this is the
+   next thing that unblocks anything.
+2. **Step 7 finish:** wire a real Anthropic transport behind the `transport(prompt, feedback)`
+   callable each agent already takes. No agent knows anything about a provider today.
+3. **Entry order manager** (design above), plus the stepped-limit exit path.
+4. **Step 8 — replay harness.** Offline bar replay driving the full pipeline with orders
+   stubbed. This is what makes prompt iteration cheap; it should come before heavy prompt
+   tuning, not after.
+5. **Step 9 — orchestrator, CLI jobs, dashboard.** Cadence work: `a1`/`a2` at their
+   `run_at_et` times, `a5` every 30 min per open position, the entry manager on its own clock.
+
+### Two open threshold questions
+
+**1. `monthly_min_sessions` at 21 is pushing realised DTE long.** On 25 Aug it selected the
+October monthly at **38 sessions / 53 calendar days**, because the September monthly sat at 18
+sessions and missed the floor by three. Lowering the floor to **~14** would have admitted
+September and roughly halved realised DTE. A nearer monthly is cheaper in premium and vega and
+worse in theta; which dominates over a 1–5 session hold is exactly what the bucket sweep
+answered for fixed bands and has **not** answered for this rule. Measure before changing.
+
+**2. Does the FMP paid tier lift the 402?** `CRM`, `ORCL`, `QCOM` and `SPCX` all return
+**HTTP 402** on the current free tier, so their earnings dates are unavailable, the exclusion
+fails closed, and they cannot be traded — regardless of liquidity. ORCL was the best contract
+in the whole 48-symbol screen (OI 8,029 at a 1.3% spread) and is unusable. Third-party pricing
+puts Starter at **$22/mo** and Premium at **$59/mo** (FMP's own pricing page 403s to automated
+fetches, so confirm on the site). **What is not known is which tier lifts the 402 for those
+specific symbols** — that is the only question that matters, and it is worth a one-month
+Starter trial tested against exactly those four tickers before committing. If it works, it
+buys more universe than any threshold change available.
 
 ### Accounts
 
-See the Accounts section below. `.env` currently points at the **dev** account.
-The competition account is a separate login and stays **untouched until
-28 Aug**. The switch is a key change only.
-
-### Credentials
-
-`.env` holds Alpaca (dev, paper), Anthropic, and — once added — `FMP_API_KEY`.
-Validation is per consumer: broker steps do not need the Anthropic key, and
-neither needs FMP. **FMP_API_KEY is set and the earnings exclusion is live**
-as of 23 Aug — verified against the real provider, not mocks. See the Earnings
-exclusion section for the endpoint trap that verification turned up.
+`.env` points at the **dev** account. The competition account stays **untouched until 28 Aug**;
+switching is a key change only.
 
 ### Things deliberately left undone
 
-- **Vertical pairing.** `compute_vertical_metrics` is written and tested, but
-  nothing builds candidate vertical pairs from the survivor set yet.
-- **Cadence rework.** The revision moves Agent 1 and 2 to once per session
-  pre-market and Agent 5 to 30 minutes. That is orchestrator work (Step 9);
-  `src/signals/` needs no change.
-- **Exit values.** `exits.stop_pct` and `target_pct` still hold intraday-era
-  values (−35 / +60) against the revision's −40 / +75 starting points.
-- **`roundtrip.*` config block.** Step 1 spike only. Delete it once the real
-  order builder lands.
-- **No threshold has been tuned against Friday-close data.** Spreads at the
-  close are not spreads at 10:30. Everything above is measurement, not tuning.
+- **Vertical pairing.** `compute_vertical_metrics` is tested, but nothing builds candidate
+  vertical pairs from the survivor set yet.
+- **Exit values.** `exits.stop_pct` / `target_pct` still hold intraday-era values (−35 / +60)
+  against the revision's −40 / +75 starting points.
+- **`roundtrip.*` config block.** Step 1 spike only. Delete it once the real order builder
+  lands — Step 1 does not route through the prefilter, so it never exercised the monthly rule.
+- **AMD dropped from the universe** (25 Aug): structurally unaffordable at this delta band,
+  and the one name where quoted spread understated realised by 2×. **PLTR added.**
+- **Slippage is measured but not applied.** The friction metrics still use quoted spread. The
+  study says that is ~15% optimistic at the population level; nothing has been recalibrated.
 
 ---
 
@@ -235,8 +252,10 @@ src/
     calendar.py        # FMP next-earnings dates; fail-closed cache
   agents/
     schemas.py         # pydantic models for all six agent contracts
-    validator.py       # parse, clamp, retry, fail-closed
-    runner.py          # generic call wrapper: timeout, logging, fallback
+    validator.py       # parse, clamp, force, retry once, fail-closed
+    runner.py          # call wrapper: path-aware timeout, hashed prompts,
+                       #   prompt-restatement backstop, failure-rate counter
+    prompt_loader.py   # $field templates from the gitignored prompts/
     a1_regime.py  a2_context.py  a3_risk.py
     a4_contract.py  a5_exit.py   a6_review.py
   risk/
