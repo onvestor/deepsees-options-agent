@@ -66,7 +66,6 @@ DTE_BUCKETS: tuple[tuple[str, int, int], ...] = (
 
 STRIKE_WINDOWS: tuple[float, ...] = (0.10, 0.15, 0.20)
 
-MODELLED_HOLD_SESSIONS = 3
 
 
 @dataclass
@@ -172,6 +171,7 @@ def measure_symbol(
     earnings_date = entry.as_date if entry else None
 
     hold_hours = limits.get_float("metrics.modeled_hold_hours")
+    hold_sessions = limits.get_int("metrics.modeled_hold_sessions")
     theta_day_hours = limits.get_float("metrics.theta_day_hours")
 
     cells: list[Cell] = []
@@ -240,14 +240,14 @@ def measure_symbol(
                 if metrics is None:
                     continue
                 premium = metrics.premium
-                thetas.append(metrics.theta_pct_per_day * MODELLED_HOLD_SESSIONS)
+                thetas.append(metrics.theta_pct_per_day * hold_sessions)
 
                 # Round-trip friction against the move one ATR actually buys.
                 expected_move = abs(metrics.delta) * atr
                 round_trip = 2.0 * metrics.spread
                 spread_moves.append(round_trip / expected_move if expected_move > 0 else float("inf"))
                 frictions.append(
-                    (round_trip + abs(metrics.theta) * MODELLED_HOLD_SESSIONS)
+                    (round_trip + abs(metrics.theta) * hold_sessions)
                     / abs(metrics.delta)
                 )
                 if quote.vega is not None and premium > 0:

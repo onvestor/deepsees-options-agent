@@ -138,7 +138,7 @@ class ContractSelector:
         self.prompt_name = prompt_name
         self.prompt_template_hash = prompt_template_hash
         self.cap = config.limits.get_int("prefilter.max_survivors_per_symbol")
-        self.fallback_hold = config.limits.get_int("agents.a4.fallback_hold_sessions")
+        self.fallback_hold = config.limits.get_int("metrics.modeled_hold_sessions")
 
     def select(
         self,
@@ -193,6 +193,11 @@ class ContractSelector:
         Single leg on purpose: a vertical is a judgment about whether four
         bid-ask crossings will be earned over the hold, and the fallback path
         exists precisely because no judgment is available.
+
+        The hold comes from ``metrics.modeled_hold_sessions`` -- the same value
+        the ranking used to decide which survivor is best. Declaring a
+        different hold than the one the ranking assumed would make the choice
+        and its justification disagree.
         """
         spec = getattr(best, "spec", best)
         return ContractDecision(

@@ -75,6 +75,7 @@ signals:
 metrics:
   realized_vol_window_days: 20  # int, sessions for close-to-close RV
   modeled_hold_hours: 18.0  # float, hold assumed by modeled P&L
+  modeled_hold_sessions: 3  # int
   theta_day_hours: 24.0  # float, hours per theta-day (24 =
                                         #   calendar basis, as Alpaca quotes it)
   breakeven_discount_k: 0.5  # float, how hard reward-to-risk is
@@ -175,7 +176,6 @@ agents:
   # Agent 4 -- Contract & Structure Selector
   a4:
     max_expected_hold_sessions: 5  # int, sessions -- NOT hours
-    fallback_hold_sessions: 3  # int
     allowed_structures: ["single_leg", "debit_vertical"]  # list[str], debit only
     vertical_min_width: 0.5  # float, strike width in dollars
     vertical_max_width: 0.5  # float

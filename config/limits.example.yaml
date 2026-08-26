@@ -79,6 +79,9 @@ signals:
 metrics:
   realized_vol_window_days: null        # int, sessions for close-to-close RV
   modeled_hold_hours: null              # float, hold assumed by modeled P&L
+  modeled_hold_sessions: null           # int, sessions assumed by anything
+                                        #   modelling a hold -- friction
+                                        #   figures and A4's fallback alike
   theta_day_hours: null                 # float, hours per theta-day (24 =
                                         #   calendar basis, as Alpaca quotes it)
   breakeven_discount_k: null            # float, how hard reward-to-risk is
@@ -176,9 +179,6 @@ agents:
   # Agent 4 -- Contract & Structure Selector
   a4:
     max_expected_hold_sessions: null    # int, sessions -- NOT hours
-    fallback_hold_sessions: null        # int, hold the deterministic
-                                        #   fallback assumes when the model's
-                                        #   choice cannot be honoured
     allowed_structures: []              # list[str], debit only
     vertical_min_width: null            # float, strike width in dollars
     vertical_max_width: null            # float
