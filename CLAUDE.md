@@ -666,19 +666,35 @@ buys.** A 0.55–0.70 long leg and a 0.25–0.35 short leg in the same expiry ar
 strike than `agents.a4.vertical_max_width` (15.0) permits, and the gap widens with both DTE and
 implied volatility.
 
-**What was measured, exactly:** a *modelled* SPY-like chain at spot 500 from
+**What this repo's harness measured, exactly:** a *modelled* SPY-like chain at spot 500 from
 `replay/chain.py`, with implied volatility swept 0.10–0.35, at three expiries. The delta curve
 is Black-Scholes, so the *direction and the ordering* are sound and the *absolute widths* are
-indicative. **No live chain has been checked for this, and no single name has been checked at
-all** — the 28 Aug live work measured the metric acceptance bands across nine symbols, which is
-a different question. Confirming on one live index chain and one live single name is the
-outstanding step, and until it is done this is a modelled result, not a market one.
+indicative rather than exact. The 28 Aug live work measured the metric acceptance bands across
+nine symbols, which is a different question and does not bear on width.
 
 | DTE | min achievable width | pairs inside 2.5–15.0 |
 | --- | --- | --- |
 | 53 days (**the chosen monthly**, 38 sessions) | 22 | **0 of 192** |
 | 25 days (nearer monthly, ~18 sessions) | 15 | 1 of 99 |
 | 14 days | 12 | 10 of 48 |
+
+**Corroboration on a live single name — MRNA. Independently observed on a live chain, not
+measured by this repo's harness.** Read from live chain screenshots in a separate
+conversation; it is not reproducible from anything in this repository and is recorded as
+supporting observation rather than as a result. Two things were seen, at **both 21 and 53
+DTE**:
+
+- The **0.25–0.35 short delta band sat past strikes that put the width well over the cap** —
+  the same failure the modelled table shows, now seen on a real single-name chain, and at the
+  nearer expiry as well as the far one.
+- **Leg spreads ran 6–18% of mid, against our 4% `prefilter.max_spread_pct_of_mid`.**
+
+**The second point is new and matters more than the first.** It is an *independent* blocker:
+widening `vertical_max_width` would fix the geometry and change nothing here, because the short
+leg fails the spread gate on its own before any pairing is attempted. A vertical needs both
+legs to clear every prefilter gate, and on this name the short leg does not clear the one gate
+that has nothing to do with width. Any future attempt at verticals has to answer the spread
+problem as well as the geometry, and on a single name that is the harder of the two.
 
 Robust across volatility and **worse as vol rises** — at the chosen monthly, pairs exist only
 below ~11% IV; at 16% and above there are none at any width. The one 25-day pair that did
@@ -690,12 +706,18 @@ Agent 4 would fall back to single-leg on every call. The blocker is **not** impl
 effort — it is that the delta bands and the width cap were sized for the intraday design and
 were never re-derived for a 21+ session expiry.
 
-**Before anyone builds this, re-derive the three numbers together:** `vertical_short_delta_*`,
-`vertical_max_width`, and `monthly_min_sessions`. A short leg nearer the money, a wider cap, or
+**Before anyone builds this, re-derive four numbers together** — three for the geometry and
+one the MRNA observation added: `vertical_short_delta_*`, `vertical_max_width`,
+`monthly_min_sessions`, and `prefilter.max_spread_pct_of_mid` **as it applies to a short leg**.
+The last one is the trap: the first three can all be tuned into a constructible pair and the
+spread gate will still reject the short leg on a single name, so tuning them alone would look
+like progress and produce nothing. A short leg nearer the money, a wider cap, or
 a nearer expiry each make pairs constructible; none of them is free, and the capture percentage
 above says the nearer expiry is the one that matters. Confirm against a live chain first — the
 table is from the replay chain model, whose delta curve is Black-Scholes and whose absolute
-widths are therefore indicative rather than exact.
+widths are therefore indicative rather than exact. **A live index chain is still unconfirmed**;
+the MRNA observation above covers the single-name case and points at the spread gate rather
+than the width cap as the binding constraint there.
 
 One further reason the answer would still be "single leg" even if pairs constructed: there is
 no broker-side stop on a spread, so a multi-session vertical is unprotected between sessions.
