@@ -22,26 +22,31 @@ Three design consequences follow from the horizon, and must not drift:
 
 ---
 
-## Session handoff — 26 Aug 2026
+## Session handoff — 28 Aug 2026
 
-State at the end of the third build session. Read this first.
+State at the end of the fourth build session. Read this first.
+
+**The competition window opened today.** Every step is built and the system ran a
+live unattended session end to end. What is left is operational, not structural --
+see "Before Monday" below, which is the only section that blocks a trading day.
 
 ### Build status
 
 | Step | State |
 | --- | --- |
 | 0 — Repo hygiene | Done. `fedf4d2` |
-| 1 — Broker round trip | **VERIFIED 25 Aug.** A full open→close cycle placed on the dev account: entry filled 74 ms, exit 51 ms, position read-back matched, closed clean. |
+| 1 — Broker round trip | **VERIFIED 25 Aug**, and re-verified 28 Aug through the real order builder rather than the spike. See "The order path" below. |
 | 2 — OCC, contracts, quotes, cache | Done. `7f7dfd6` |
 | 3 — Signal engine | Done. `5f424ef`. Timeframe-agnostic. |
 | 4 — Prefilter + metrics | Done, then substantially revised: monthly-anchored expiry selection (`13298c8`), expiry-type awareness, spread filter rebuilt (`09868fa`). |
 | 5 — Risk engine | Done. `ae38523` |
 | 6 — Decision logger | Done. `bd94998`, extended with `AgentOverridePayload` (`31d686b`). |
-| 7 — Agent layer | **Plumbing and all six agents done. No prompts.** See below. |
-| 8 — Replay harness | Not started. |
-| 9 — Orchestrator, CLI, dashboard | Not started. |
+| 7 — Agent layer | **Done, 28 Aug.** All six prompts written; real Anthropic transport behind the `transport()` callable. |
+| 8 — Replay harness | **Done, 28 Aug.** Offline bar replay, synthetic chain, stubbed orders, record-once/replay-many transports. `python -m cli.replay_session`. |
+| 9 — Orchestrator | **Done, 28 Aug.** Ran live and unattended: `cli/run_session.py --live`. |
+| 9b — Dashboard | **Done, 28 Aug.** Four read-only views over the decision log; `python -m cli.dashboard`. This is the submission demo URL. |
 
-~1,497 offline tests, 10 live. The suite runs with **`config/` absent** — verified by moving
+~1,753 offline tests, 10 live. The suite runs with **`config/` absent** — verified by moving
 it aside — so a fresh clone can run everything offline.
 
 ### Step 7 — what exists and what does not
@@ -82,18 +87,133 @@ whether the trade is still worth taking at that price, displacement is capacity-
 than staleness-driven, and `worst_current_edge` stays off until the edge model is validated
 against realised outcomes.
 
+### Before Monday — the only things that block a trading day
+
+1. **Switch `.env` to the competition keys.** Comment out the active pair, uncomment the
+   competition pair. **The `.env` header comment is not evidence:** on 28 Aug it read
+   an account number that the live keys did **not** address. Which account a key pair
+   addresses is a property of the keys, and only the broker can tell you. Verify with
+   `python -m cli.preflight --expect-account <number> --expect-equity 100000 --require-level 3
+   --require-flat` — exit 0 or it is not switched.
+2. **Re-register the scheduled task from an elevated PowerShell.** It fell back to
+   `LogonType=Interactive`, which fires only while the operator is logged on — a machine at the
+   lock screen on Monday would simply not trade. `powershell -ExecutionPolicy Bypass -File
+   scripts\install_tasks.ps1 -ExpectAccount <number> -TestAt '<local datetime>'` when elevated
+   registers `S4U` instead.
+3. **Two positions are open** from the 28 Aug session and will be managed from the open.
+
+`DeepSees-Session` fires 05:45 local = **08:45 ET**, Mon–Fri. The machine is Pacific; both
+zones share DST dates so the three-hour offset is stable, and the task's local time is the
+thing to check if a firing ever looks an hour out. The wrapper gates the session on the
+account preflight and **refuses to start** if the keys address the wrong account.
+
+### The first live session — 28 Aug, dev account
+
+1,586 decision-log records, 11:51–16:04 ET. Read it with `python -m cli.session_report`.
+
+| | |
+| --- | --- |
+| agent calls | 85 across all six, zero failures, zero clamps, median 1.8–4.7 s |
+| schema retries | 3, all a trailing comma from Agent 2, all recovered on the retry |
+| skips | 102, by stage: entry 50, signal 13, a3 13, a2 12, order 9, a2_earnings 3, a1 2 |
+| orders | 11 placed, **2 filled** — the passive mid limit is doing what the fill study said |
+| forces | 13, all `agents.a2.min_bias_strength` or the eligible-set truncation |
+| kill switches | 1,240 evaluations |
+
+**What the session proves.** The retry path recovered malformed model output in production.
+The earnings exclusion blocked NVDA in code before any model call. `max_positions_per_symbol`
+refused repeat entries on held symbols. Agent 5 marked both open positions every 30 minutes
+and held them against the −35% stop. Agent 6 ran at the close.
+
+**Two bugs it found that no offline test could.**
+
+*The kill switch was reading sizing capital, not equity.* `options_buying_power` falls by the
+premium of every position opened, so two open positions showed as a 4,505 "loss" against a real
+equity change of −170 and tripped three halts after two trades. It would have halted Monday
+around 09:20. Fixed; 12 spurious fires before, **zero across 895 evaluations after**.
+
+*`position.contract_symbol` on a class whose field is `symbol`* took out the exit handler on
+every tick. The orchestrator isolated it and the deterministic exits stayed armed, but no open
+position was managed until it was caught. It reached a live session because `live.py` had no
+tests; `tests/test_live_session.py` now covers it.
+
+**The one calibration finding.** Agent 2 returned `bias_strength` 0.35 for symbols it disliked
+and 0.45 for ones it liked, against a floor of 0.40 — so the model clusters either side of the
+gate and every rejection shows as a force. Either the prompt needs calibration guidance or the
+floor wants moving. The log has the evidence; do not guess.
+
+### The dashboard — the submission demo URL
+
+`python -m cli.dashboard --host 0.0.0.0 --port 8080`. FastAPI plus one self-contained page, no
+build step. Four views: session timeline, decision trace, guardrail events, live status.
+`--check` renders every route and asserts read-only.
+
+**Every figure comes from `decision_log.jsonl` and nothing else.** No broker calls — if a fact
+is not in the log the dashboard cannot show it, which is what makes it an audit trail rather
+than a second unverifiable view. The status panel reports its own staleness rather than looking
+current after the session stops.
+
+**Read-only is structural**, not a promise: no mutating verb is routed, no broker client is
+ever constructed, and a test monkeypatches `build_clients` to raise and asserts every route
+still serves. A "close position" button on a dashboard for an autonomous system is a
+contradiction.
+
+Safe to expose: prompts are stored as hashes, credentials are scrubbed by the log's redactor,
+and account numbers were never written to it.
+
+### The order path — built and proven live, 28 Aug
+
+`src/brokers/alpaca/orders.py` and `positions.py` exist. **Single-leg only** (see the vertical
+finding above). `cli/step1_roundtrip.py` no longer carries its own chain fetch, snapshot
+batching, candidate filter or order construction — it routes through the real modules, and
+dropped from 559 lines to 305.
+
+**Verified on the dev account, 28 Aug**, through the real path rather than the spike:
+
+| | |
+| --- | --- |
+| contract | `SPY261016C00775000`, chosen by the real prefilter (111 scanned, 8 survivors) |
+| entry | passive mid limit 15.48 → filled 15.44 |
+| read-back | reconciled from Alpaca; OCC fields parsed from the symbol |
+| exit | stepped ladder (15.64, 15.25), high urgency, filled 15.44 on rung 2 |
+| result | position closed, book empty, no stray orders |
+
+**The first attempt did not fill and was cancelled at the 20s timeout.** That is the design,
+not a failure — the 25 Aug study measured a 55% mid-fill rate on buys — and it is why the
+entry order manager exists as a separate concern.
+
+The realised round trip came out at 0.00% of premium against a 2.39% quoted spread, because
+the underlying moved between entry and exit. **Do not generalise from it.** That ratio is an
+unstable statistic at n=1, which is the same trap the Step 1 round trip's apparent 8–10x set —
+see "Realised friction" below.
+
+**Two shapes, on purpose.** Entry is one passive mid limit that fills or does not; repricing
+belongs to the entry order manager on its own clock. Exit is a stepped limit whose urgency is
+keyed to the **exit reason** — stop, expiry-week and agent-exit are HIGH; max-hold is MEDIUM;
+target and scale-out are LOW. Every ladder terminates at the bid, so an exit that must happen
+happens; urgency changes only how fast. An unrecognised reason maps to HIGH: failing closed in
+the direction of leaving.
+
+**`positions.py` never caches.** Every read hits Alpaca. The orchestrator's `reconcile` job is
+only worth running if it is authoritative, the cancellation race corrupts exactly this state,
+and assignment/exercise/expiry change the book with no order of ours involved.
+
+**Still unbuilt:** the entry order manager (design under "Entry order management"), and the
+dashboard.
+
 ### Remaining work, in order
 
-1. **Prompts for the six agents.** The contracts are stable and stub-tested; this is the
-   next thing that unblocks anything.
-2. **Step 7 finish:** wire a real Anthropic transport behind the `transport(prompt, feedback)`
-   callable each agent already takes. No agent knows anything about a provider today.
-3. **Entry order manager** (design above), plus the stepped-limit exit path.
-4. **Step 8 — replay harness.** Offline bar replay driving the full pipeline with orders
-   stubbed. This is what makes prompt iteration cheap; it should come before heavy prompt
-   tuning, not after.
-5. **Step 9 — orchestrator, CLI jobs, dashboard.** Cadence work: `a1`/`a2` at their
-   `run_at_et` times, `a5` every 30 min per open position, the entry manager on its own clock.
+1. **The three items under "Before Monday" above.** Nothing else blocks a trading day.
+2. **The entry order manager** (design further down). `execution.entry_reprice_cadence_seconds`
+   is still deliberately unset. 9 of 11 orders on 28 Aug did not fill at the mid, which is what
+   this component exists to improve — it is the highest-value remaining build.
+3. **Prompt iteration** against the replay harness. Record once with
+   `python -m cli.replay_session --record`, then iterate offline for free — a recording is
+   keyed by the rendered prompt's hash, so an edited prompt is a miss that names the agent
+   rather than a stale hit.
+4. **Re-measure `monthly_min_sessions`.** Still 21, still selecting a 34–38 session expiry.
+   The open question below is unchanged.
+5. **Dashboard.** FastAPI over the decision log.
 
 ### Two open threshold questions
 
@@ -121,10 +241,14 @@ switching is a key change only.
 
 ### Things deliberately left undone
 
-- **Vertical pairing.** `compute_vertical_metrics` is tested, but nothing builds candidate
-  vertical pairs from the survivor set yet.
+- **Verticals: designed, measured, and NOT shipped.** Decided 28 Aug — see
+  "Debit verticals are unconstructible at swing DTE" below. `compute_vertical_metrics`
+  stays (31 tests); nothing builds pairs, and nothing should until the delta bands and
+  the width cap are re-derived together. **Ship single-leg only.**
 - **Exit values.** `exits.stop_pct` / `target_pct` still hold intraday-era values (−35 / +60)
-  against the revision's −40 / +75 starting points.
+  against the revision's −40 / +75 starting points. `exits.max_hold_sessions` and
+  `exits.min_sessions_to_expiry` were added 28 Aug (both 5): the block previously held only
+  `max_hold_minutes`, so nothing could enforce a hold counted in sessions.
 - **`roundtrip.*` config block.** Step 1 spike only. Delete it once the real order builder
   lands — Step 1 does not route through the prefilter, so it never exercised the monthly rule.
 - **AMD dropped from the universe** (25 Aug): structurally unaffordable at this delta band,
@@ -432,6 +556,54 @@ options feed, taken in one session. Direction and magnitude are evidence; they a
 substitute for the same measurement against a live-money fill engine, and the write-up should
 say so.
 
+## Metric acceptance bands — wired 28 Aug, one of six does the work
+
+The six `metrics.*` bands were **declared in config and read by nothing** until 28 Aug. The
+prefilter gated on open interest, bid, spread percentage, delta, DTE and expiry type, computed
+the metrics, and used them only for ranking and the log. They are now rejection gates behind
+`prefilter.apply_metric_bands`.
+
+Measured on nine live chains at 34 sessions DTE, same chain scored both ways:
+
+| band | rejections | verdict |
+| --- | --- | --- |
+| `max_breakeven_move_pct` | **37 of 48 survivors** at 0.02 | intraday-era; retuned to 0.05 |
+| `max_theta_pct_per_day` | 0 | inert at 0.12 |
+| `min_gamma_per_1pct` | 0 | inert |
+| `max_iv_vs_rv_ratio` | 0 | inert at 1.60 |
+| `max_spread_cost_pct_of_premium` | 0 | **cannot ever fire** — see below |
+| `min_modeled_pnl_ratio` | 0 | inert at 1.30 |
+
+**`max_breakeven_move_pct: 0.02` was the whole filter, and it was the wrong one.** At 34
+sessions DTE a 0.55–0.75 delta call carries enough time value that breakeven sits 1.6–7.0% above
+spot. A 2% ceiling kept 15% of survivors — and structurally kept only the index ETFs, because a
+volatile single name needs a larger percentage move at the same delta. It emptied NVDA, PLTR,
+AAPL, MSFT, TSLA and META entirely. Retuned to **0.05** on the measured distribution (median
+2.6%, p75 3.7%, max 7.0%), which keeps 90% and cuts only the far tail; PLTR still empties, which
+is the band doing its job rather than the band being wrong.
+
+**`max_spread_cost_pct_of_premium` is redundant by construction.** Premium is the mid, so it is
+arithmetically the same quantity as `prefilter.max_spread_pct_of_mid`, which is tighter (0.04)
+and runs first. It is kept as a backstop and annotated as one. It rejected zero contracts not
+because spreads were tight but because it is unreachable.
+
+**The better long-term gate is ATR-relative.** `breakeven_distance_atr` already exists and is
+the comparable-across-names measure, in exactly the way `gamma_per_1pct` is. A percent-of-spot
+band systematically discriminates against volatile names; an ATR band does not. Worth measuring
+before the write-up.
+
+## Modelled hold — one value, derived
+
+`metrics.modeled_hold_hours` is **gone**. It held 4.0 — an intraday leftover — beside
+`metrics.modeled_hold_sessions: 3`, and the two disagreed. The decay term in `compute_metrics`
+is `theta × hold_hours / theta_day_hours`, so a 4-hour hold understated theta by a factor of 18
+in every modelled P&L the prefilter ranks on. `modeled_hold_hours(limits)` now derives it as
+`modeled_hold_sessions × theta_day_hours`, so the two cannot diverge again.
+
+Effect on ranking, checked rather than assumed: the survivor **order is unchanged** — theta is a
+near-uniform subtraction across near-the-money strikes — but `modeled_pnl_1atr` was overstated
+by roughly 16%, and every modelled figure in the decision log with it.
+
 ## Universe screening — 25 Aug, 48 symbols
 
 **Nine sector ETFs returned zero survivors** — XLK, XLV, XLI, XLY, XBI, XOP, IYR, EFA and IJR
@@ -465,6 +637,42 @@ intrinsic value and crossing wider spreads for a diminishing gain over simply ho
 expiry. On a long-dated contract over a 3-session hold a vertical barely moves — the short leg's
 decay offsets the long leg's gain. If the Monday measurement lands on a long DTE band, Agent 4's
 structure guidance should favour single-leg heavily.
+
+### Debit verticals are unconstructible at swing DTE — measured 28 Aug
+
+**The two bands in the table above contradict each other at the expiry this system actually
+buys.** A 0.55–0.70 long leg and a 0.25–0.35 short leg in the same expiry are further apart in
+strike than `agents.a4.vertical_max_width` (15.0) permits, and the gap widens with both DTE and
+implied volatility. Measured on a modelled SPY chain at spot 500:
+
+| DTE | min achievable width | pairs inside 2.5–15.0 |
+| --- | --- | --- |
+| 53 days (**the chosen monthly**, 38 sessions) | 22 | **0 of 192** |
+| 25 days (nearer monthly, ~18 sessions) | 15 | 1 of 99 |
+| 14 days | 12 | 10 of 48 |
+
+Robust across volatility and **worse as vol rises** — at the chosen monthly, pairs exist only
+below ~11% IV; at 16% and above there are none at any width. The one 25-day pair that did
+construct captured **13.1%** of max value over a 3-session hold, with modelled P&L of 1.117 per
+share against the best single leg's 2.571.
+
+So building the pairing layer would produce a survivor set of zero on nearly every scan, and
+Agent 4 would fall back to single-leg on every call. The blocker is **not** implementation
+effort — it is that the delta bands and the width cap were sized for the intraday design and
+were never re-derived for a 21+ session expiry.
+
+**Before anyone builds this, re-derive the three numbers together:** `vertical_short_delta_*`,
+`vertical_max_width`, and `monthly_min_sessions`. A short leg nearer the money, a wider cap, or
+a nearer expiry each make pairs constructible; none of them is free, and the capture percentage
+above says the nearer expiry is the one that matters. Confirm against a live chain first — the
+table is from the replay chain model, whose delta curve is Black-Scholes and whose absolute
+widths are therefore indicative rather than exact.
+
+Two further reasons the answer would still be "single leg" even if pairs constructed:
+`src/brokers/alpaca/orders.py` does not exist — the only order-placing code is the Step 1 spike,
+single-leg — so verticals would add an `mleg` path to a component that has not had its first
+one; and there is no broker-side stop on a spread, so a multi-session vertical is unprotected
+overnight.
 
 ---
 
