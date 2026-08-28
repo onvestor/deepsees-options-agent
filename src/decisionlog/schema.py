@@ -280,6 +280,27 @@ class OrderPayload(_Base):
     broker_error: str | None = None
 
 
+class SkipPayload(_Base):
+    """A stage that declined to act, and why.
+
+    The other payloads all describe something that happened -- a chain scored,
+    a size computed, an order sent. This one exists because **a skip is a
+    decision**, and the sessions where the log matters most are the ones that
+    traded nothing. "Why was there no trade all morning" is answerable only if
+    every stage that declined said so with the same weight as a stage that
+    acted.
+
+    ``stage`` is the pipeline step, not the agent: an entry can die at the
+    signal, the prefilter, the selector or the sizer, and which one it was is
+    the first thing a reader needs.
+    """
+
+    kind: Literal["skip"] = "skip"
+    stage: str
+    reason: str
+    detail: dict[str, Any] = Field(default_factory=dict)
+
+
 Payload = Annotated[
     Union[
         SessionPayload,
@@ -291,6 +312,7 @@ Payload = Annotated[
         CapOverridePayload,
         KillSwitchPayload,
         OrderPayload,
+        SkipPayload,
     ],
     Field(discriminator="kind"),
 ]
