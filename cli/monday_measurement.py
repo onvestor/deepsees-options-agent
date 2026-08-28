@@ -48,7 +48,7 @@ from src.brokers.alpaca.contracts import fetch as fetch_contracts
 from src.brokers.alpaca.quotes import fetch_snapshots
 from src.config import Section, load_config
 from src.earnings.calendar import EarningsCalendar, EarningsError, spans_earnings
-from src.options.metrics import CONTRACT_MULTIPLIER, MetricError, compute_metrics, realized_volatility
+from src.options.metrics import CONTRACT_MULTIPLIER, MetricError, compute_metrics, modeled_hold_hours, realized_volatility
 from src.options.prefilter import evaluate_candidates
 from src.risk.sizing import AccountState, SizingLimits, compute_size
 from src.signals.indicators import atr as atr_indicator
@@ -170,7 +170,7 @@ def measure_symbol(
     entry = earnings.get(symbol) if earnings else None
     earnings_date = entry.as_date if entry else None
 
-    hold_hours = limits.get_float("metrics.modeled_hold_hours")
+    hold_hours = modeled_hold_hours(limits)
     hold_sessions = limits.get_int("metrics.modeled_hold_sessions")
     theta_day_hours = limits.get_float("metrics.theta_day_hours")
 

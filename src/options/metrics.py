@@ -47,6 +47,7 @@ __all__ = [
     "VerticalMetrics",
     "compute_metrics",
     "compute_vertical_metrics",
+    "modeled_hold_hours",
     "realized_volatility",
     "TRADING_DAYS_PER_YEAR",
 ]
@@ -68,6 +69,34 @@ CONTRACT_MULTIPLIER = 100
 
 class MetricError(ValueError):
     """An input needed for a metric is missing or degenerate."""
+
+
+def modeled_hold_hours(limits) -> float:
+    """The modelled hold, in hours, derived from the hold in sessions.
+
+    There is deliberately no ``metrics.modeled_hold_hours`` key. It existed
+    alongside ``modeled_hold_sessions`` and the two disagreed: 4.0 hours beside
+    a 3-session hold, a leftover from the intraday design that survived the
+    swing revision. The decay term is ``theta * hold_hours / theta_day_hours``,
+    so the mismatch understated theta by a factor of eighteen in every modelled
+    P&L the prefilter ranks on.
+
+    One value, one place. ``theta_day_hours`` is the calendar basis Alpaca
+    quotes theta on, so sessions convert through it rather than through market
+    hours -- theta accrues over the weekend and a hold measured in trading
+    sessions spans those weekends.
+    """
+    sessions = limits.get_int("metrics.modeled_hold_sessions")
+    day_hours = limits.get_float("metrics.theta_day_hours")
+    if sessions < 1:
+        raise MetricError(
+            f"metrics.modeled_hold_sessions must be >= 1, got {sessions}"
+        )
+    if day_hours <= 0:
+        raise MetricError(
+            f"metrics.theta_day_hours must be positive, got {day_hours}"
+        )
+    return float(sessions) * day_hours
 
 
 def realized_volatility(
@@ -140,6 +169,41 @@ class ContractMetrics:
     def is_finite(self) -> bool:
         """Acceptance requires every metric populated with no NaNs."""
         return all(math.isfinite(v) for v in self.as_dict().values())
+
+    # --- derived, for the acceptance bands ---------------------------------
+
+    @property
+    def spread_pct_of_premium(self) -> float:
+        """Quoted spread as a fraction of what the contract costs.
+
+        Distinct from ``spread_cost_pct_of_atr``, which measures the spread
+        against the option move one ATR of underlying produces. Those two
+        disagree whenever delta is far from 1: a cheap far-OTM contract can
+        look tight against its premium and ruinous against its ATR move.
+
+        **It is, however, identical to the prefilter's own
+        ``spread_pct_of_mid``** -- premium here is the mid, so the two are the
+        same quantity under different names. That makes
+        ``metrics.max_spread_cost_pct_of_premium`` a redundant backstop rather
+        than an independent test: whichever of the two thresholds is tighter
+        does all the work, and the structural gate runs first. Recorded rather
+        than quietly dropped, because a band that cannot fire is exactly the
+        thing this codebase already had six of.
+        """
+        return self.spread / self.premium if self.premium > 0 else math.inf
+
+    @property
+    def breakeven_move_pct(self) -> float:
+        """Underlying move to breakeven, as a signed fraction of spot.
+
+        Signed on purpose. A contract already past its breakeven has a
+        negative distance, and that should clear a ceiling on how far the
+        underlying still has to travel -- taking the absolute value would
+        reject the best case in the set.
+        """
+        if self.spot <= 0:
+            return math.inf
+        return (self.breakeven_distance_atr * self.atr) / self.spot
 
     # --- per-contract dollars, for sizing and the risk layer ---------------
 

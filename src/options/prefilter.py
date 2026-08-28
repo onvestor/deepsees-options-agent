@@ -41,11 +41,17 @@ from src.brokers.alpaca.quotes import OptionQuote, fetch_snapshots
 from src.options.expiry import (
     MONTHLY, WEEKLY, ExpiryType, classify, next_monthly_at_least,
 )
-from src.options.metrics import ContractMetrics, MetricError, compute_metrics
+from src.options.metrics import (
+    ContractMetrics,
+    MetricError,
+    compute_metrics,
+    modeled_hold_hours,
+)
 
 log = logging.getLogger(__name__)
 
-__all__ = ["Candidate", "PrefilterResult", "run_prefilter", "REASONS"]
+__all__ = ["Candidate", "PrefilterResult", "ScanPlan", "plan_scan",
+           "assemble", "run_prefilter", "REASONS"]
 
 OptionType = Literal["call", "put"]
 
@@ -68,6 +74,16 @@ REASONS = (
     "expired",
     "not tradable",
     "unscoreable",
+    # Metric acceptance bands. Applied only when
+    # prefilter.apply_metric_bands is true, and always last -- they need the
+    # metrics, which are only computed for a contract that cleared everything
+    # else.
+    "theta too high",
+    "gamma too low",
+    "iv rich",
+    "spread cost vs premium",
+    "breakeven too far",
+    "modeled pnl too low",
 )
 
 
@@ -185,8 +201,9 @@ def evaluate_candidates(
     dte_min = limits.get_int("prefilter.dte_min")
     dte_max = limits.get_int("prefilter.dte_max")
     require_monthly = limits.get_bool("prefilter.require_monthly_expiry")
-    hold_hours = limits.get_float("metrics.modeled_hold_hours")
+    hold_hours = modeled_hold_hours(limits)
     theta_day_hours = limits.get_float("metrics.theta_day_hours")
+    apply_bands = limits.get_bool("prefilter.apply_metric_bands")
 
     out: list[Candidate] = []
     for spec in specs:
@@ -284,6 +301,32 @@ def evaluate_candidates(
                 log.debug("%s unscoreable: %s", spec.symbol, exc)
                 failures.append("unscoreable")
 
+        # The acceptance bands run last, on a contract that cleared every
+        # structural gate and scored. Metrics are kept on the candidate even
+        # when a band rejects it -- the near-boundary report is the whole
+        # reason these are worth recording, and it needs the values.
+        if metrics is not None and apply_bands:
+            for reason, value, limit, over in (
+                ("theta too high", metrics.theta_pct_per_day,
+                 limits.get_float("metrics.max_theta_pct_per_day"), True),
+                ("gamma too low", metrics.gamma_per_1pct,
+                 limits.get_float("metrics.min_gamma_per_1pct"), False),
+                ("iv rich", metrics.iv_vs_rv,
+                 limits.get_float("metrics.max_iv_vs_rv_ratio"), True),
+                ("spread cost vs premium", metrics.spread_pct_of_premium,
+                 limits.get_float("metrics.max_spread_cost_pct_of_premium"), True),
+                ("breakeven too far", metrics.breakeven_move_pct,
+                 limits.get_float("metrics.max_breakeven_move_pct"), True),
+                ("modeled pnl too low", metrics.pnl_to_spread_ratio,
+                 limits.get_float("metrics.min_modeled_pnl_ratio"), False),
+            ):
+                if over and value > limit:
+                    failures.append(reason)
+                    distances.append(_bounded_ratio(value, limit))
+                elif not over and value < limit:
+                    failures.append(reason)
+                    distances.append(_bounded_ratio(limit - value, limit))
+
         out.append(
             Candidate(
                 spec=spec,
@@ -298,35 +341,43 @@ def evaluate_candidates(
     return out
 
 
-def run_prefilter(
-    clients: AlpacaClients,
-    symbol: str,
-    spot: float,
-    atr: float,
-    realized_vol: float,
+@dataclass(frozen=True)
+class ScanPlan:
+    """Where to look, decided before anything is fetched.
+
+    Extracted so the replay harness selects the expiry by the same rule the
+    live path does. The expiry rule is the piece most likely to drift between
+    a live scan and an offline one, and a replay that scanned a different
+    expiry than production would be measuring the wrong contract.
+    """
+
+    target_expiry: date
+    target_session_dte: int
+    expiry_gte: date
+    expiry_lte: date
+    strike_gte: float
+    strike_lte: float
+
+
+def plan_scan(
+    limits: Any,
     calendar: TradingCalendar,
     order_session: date,
-    option_type: OptionType,
-    cache: MarketDataCache | None = None,
-) -> PrefilterResult:
-    """Narrow the universe, fetch quotes for it, filter, score, rank, cap.
+    symbol: str,
+    spot: float,
+) -> ScanPlan:
+    """Choose the expiry and the strike window. Raises if the guard band fails.
 
-    The narrowing is the whole point of the ordering: expiry bounds come from
-    the trading-session DTE band, strike bounds from a window around spot, and
-    only what survives both is ever sent to the snapshots endpoint.
+    The expiry is chosen, not bounded. A fixed calendar-day window inside a
+    ~30-day monthly cycle misses the monthly about half the time; anchoring on
+    the nearest monthly at least ``monthly_min_sessions`` out always lands on
+    the liquid contract. DTE therefore varies per trade and is recorded on the
+    result rather than assumed from config.
     """
-    limits = clients.config.limits
     dte_min = limits.get_int("prefilter.dte_min")
     dte_max = limits.get_int("prefilter.dte_max")
     window = limits.get_float("prefilter.strike_window_pct")
-    max_survivors = limits.get_int("prefilter.max_survivors_per_symbol")
-    prefer_monthly = limits.get_bool("prefilter.prefer_monthly_expiry")
 
-    # The expiry is chosen, not bounded. A fixed calendar-day window inside a
-    # ~30-day monthly cycle misses the monthly about half the time; anchoring
-    # on the nearest monthly at least `monthly_min_sessions` out always lands
-    # on the liquid contract. DTE therefore varies per trade and is recorded
-    # on the result rather than assumed from config.
     target_expiry = next_monthly_at_least(
         order_session,
         limits.get_int("prefilter.monthly_min_sessions"),
@@ -339,26 +390,37 @@ def run_prefilter(
             f"{symbol}: nearest monthly {target_expiry} is {target_dte} sessions out, "
             f"outside the guard band [{dte_min}, {dte_max}]. Refusing to scan."
         )
-    expiry_gte = expiry_lte = target_expiry
-    strike_gte = round(spot * (1.0 - window), 2)
-    strike_lte = round(spot * (1.0 + window), 2)
-
-    specs = fetch_contracts(
-        clients, symbol,
-        expiry_gte=expiry_gte, expiry_lte=expiry_lte,
-        option_type=option_type,
-        strike_gte=strike_gte, strike_lte=strike_lte,
-        cache=cache,
-    )
-    log.info(
-        "%s: target monthly expiry %s at %d sessions", symbol, target_expiry, target_dte,
-    )
-    log.info(
-        "%s: narrowed universe %d contracts (%s..%s, strikes %.2f..%.2f = +/-%.0f%% of %.2f)",
-        symbol, len(specs), expiry_gte, expiry_lte, strike_gte, strike_lte, window * 100, spot,
+    return ScanPlan(
+        target_expiry=target_expiry,
+        target_session_dte=target_dte,
+        expiry_gte=target_expiry,
+        expiry_lte=target_expiry,
+        strike_gte=round(spot * (1.0 - window), 2),
+        strike_lte=round(spot * (1.0 + window), 2),
     )
 
-    quotes = fetch_snapshots(clients, [s.symbol for s in specs], cache=cache)
+
+def assemble(
+    symbol: str,
+    specs: Sequence[ContractSpec],
+    quotes: dict[str, OptionQuote],
+    calendar: TradingCalendar,
+    order_session: date,
+    spot: float,
+    atr: float,
+    realized_vol: float,
+    limits: Any,
+    plan: ScanPlan,
+) -> PrefilterResult:
+    """Filter, score, rank and cap. Everything after the data arrives.
+
+    Split from :func:`run_prefilter` so the offline replay harness runs the
+    *same* ranking, coverage accounting and threshold record as a live session.
+    Duplicating any of it would let replay and production disagree silently,
+    which is the one thing a replay harness must not do.
+    """
+    max_survivors = limits.get_int("prefilter.max_survivors_per_symbol")
+    prefer_monthly = limits.get_bool("prefilter.prefer_monthly_expiry")
 
     # Coverage measured INSIDE the narrowed window -- the population the
     # prefilter actually sees. Reported separately from any wide-chain figure,
@@ -376,8 +438,8 @@ def run_prefilter(
     candidates = evaluate_candidates(
         specs, quotes, calendar, order_session, spot, atr, realized_vol, limits
     )
-    # Monthly first when preferred, then modelled P&L per unit of spread
-    # cost within each group. A monthly never loses to a weekly on rank alone,
+    # Monthly first when preferred, then modelled P&L per unit of spread cost
+    # within each group. A monthly never loses to a weekly on rank alone,
     # because the weekly's edge is usually a quote that will not survive the
     # round trip.
     survivors = tuple(sorted(
@@ -398,20 +460,20 @@ def run_prefilter(
     return PrefilterResult(
         symbol=symbol,
         spot=spot, atr=atr, realized_vol=realized_vol,
-        expiry_gte=expiry_gte, expiry_lte=expiry_lte,
-        strike_gte=strike_gte, strike_lte=strike_lte,
+        expiry_gte=plan.expiry_gte, expiry_lte=plan.expiry_lte,
+        strike_gte=plan.strike_gte, strike_lte=plan.strike_lte,
         candidates=tuple(candidates),
         survivors=survivors,
         top=top,
         narrowed_coverage=narrowed_coverage,
-        target_expiry=target_expiry,
-        target_session_dte=target_dte,
+        target_expiry=plan.target_expiry,
+        target_session_dte=plan.target_session_dte,
         thresholds={
-            "strike_window_pct": window,
-            "dte_min": float(dte_min),
-            "dte_max": float(dte_max),
+            "strike_window_pct": limits.get_float("prefilter.strike_window_pct"),
+            "dte_min": float(limits.get_int("prefilter.dte_min")),
+            "dte_max": float(limits.get_int("prefilter.dte_max")),
             "monthly_min_sessions": float(limits.get_int("prefilter.monthly_min_sessions")),
-            "target_session_dte": float(target_dte),
+            "target_session_dte": float(plan.target_session_dte),
             "delta_min": limits.get_float("prefilter.delta_min"),
             "delta_max": limits.get_float("prefilter.delta_max"),
             "min_open_interest": float(limits.get_int("prefilter.min_open_interest")),
@@ -420,5 +482,61 @@ def run_prefilter(
             "max_survivors_per_symbol": float(max_survivors),
             "require_monthly_expiry": float(limits.get_bool("prefilter.require_monthly_expiry")),
             "prefer_monthly_expiry": float(prefer_monthly),
+            "apply_metric_bands": float(limits.get_bool("prefilter.apply_metric_bands")),
+            "max_theta_pct_per_day": limits.get_float("metrics.max_theta_pct_per_day"),
+            "min_gamma_per_1pct": limits.get_float("metrics.min_gamma_per_1pct"),
+            "max_iv_vs_rv_ratio": limits.get_float("metrics.max_iv_vs_rv_ratio"),
+            "max_spread_cost_pct_of_premium": limits.get_float(
+                "metrics.max_spread_cost_pct_of_premium"
+            ),
+            "max_breakeven_move_pct": limits.get_float("metrics.max_breakeven_move_pct"),
+            "min_modeled_pnl_ratio": limits.get_float("metrics.min_modeled_pnl_ratio"),
         },
+    )
+
+
+def run_prefilter(
+    clients: AlpacaClients,
+    symbol: str,
+    spot: float,
+    atr: float,
+    realized_vol: float,
+    calendar: TradingCalendar,
+    order_session: date,
+    option_type: OptionType,
+    cache: MarketDataCache | None = None,
+) -> PrefilterResult:
+    """Narrow the universe, fetch quotes for it, filter, score, rank, cap.
+
+    The narrowing is the whole point of the ordering: expiry bounds come from
+    the chosen monthly, strike bounds from a window around spot, and only what
+    survives both is ever sent to the snapshots endpoint.
+    """
+    limits = clients.config.limits
+    plan = plan_scan(limits, calendar, order_session, symbol, spot)
+
+    specs = fetch_contracts(
+        clients, symbol,
+        expiry_gte=plan.expiry_gte, expiry_lte=plan.expiry_lte,
+        option_type=option_type,
+        strike_gte=plan.strike_gte, strike_lte=plan.strike_lte,
+        cache=cache,
+    )
+    log.info(
+        "%s: target monthly expiry %s at %d sessions",
+        symbol, plan.target_expiry, plan.target_session_dte,
+    )
+    log.info(
+        "%s: narrowed universe %d contracts (%s..%s, strikes %.2f..%.2f "
+        "= +/-%.0f%% of %.2f)",
+        symbol, len(specs), plan.expiry_gte, plan.expiry_lte,
+        plan.strike_gte, plan.strike_lte,
+        limits.get_float("prefilter.strike_window_pct") * 100, spot,
+    )
+
+    quotes = fetch_snapshots(clients, [s.symbol for s in specs], cache=cache)
+
+    return assemble(
+        symbol, specs, quotes, calendar, order_session, spot, atr, realized_vol,
+        limits, plan,
     )

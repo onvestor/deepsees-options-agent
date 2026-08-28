@@ -56,6 +56,9 @@ prefilter:
   max_spread_pct_of_mid: null           # float, e.g. 0.05 == 5%
   min_bid: null                         # float, dollars
   monthly_min_sessions: null            # int, floor for the chosen monthly expiry
+  apply_metric_bands: null              # bool -- apply the metrics.* bands
+                                        #   as rejection gates, not just as
+                                        #   ranking inputs
   require_monthly_expiry: null          # bool, reject non-monthly expiries
   prefer_monthly_expiry: null           # bool, rank monthlies above weeklies
   strike_window_pct: null               # float, +/- around spot. NARROWS the
@@ -78,7 +81,6 @@ signals:
 # --- Computed metrics: acceptance bands ------------------------------------
 metrics:
   realized_vol_window_days: null        # int, sessions for close-to-close RV
-  modeled_hold_hours: null              # float, hold assumed by modeled P&L
   modeled_hold_sessions: null           # int, sessions assumed by anything
                                         #   modelling a hold -- friction
                                         #   figures and A4's fallback alike
@@ -88,7 +90,7 @@ metrics:
                                         #   discounted per ATR of breakeven
                                         #   distance when ranking verticals
   max_theta_pct_per_day: null           # float, theta / premium
-  min_gamma: null                       # float
+  min_gamma_per_1pct: null                       # float
   max_iv_vs_rv_ratio: null              # float
   max_spread_cost_pct_of_premium: null  # float
   max_breakeven_move_pct: null          # float, underlying move to breakeven
@@ -132,18 +134,32 @@ exits:
   trail_activate_pct: null              # float, positive
   trail_giveback_pct: null              # float, positive
   scale_out_fraction: null              # float, 0.0-1.0
-  max_hold_minutes: null                # int
+  max_hold_minutes: null                # int -- intraday-era; kept, but a
+                                        #   multi-session hold is counted below
+  max_hold_sessions: null               # int -- flat on this session, any P&L
+  min_sessions_to_expiry: null          # int -- never manage a position inside
+                                        #   this many sessions of expiry
   poll_interval_seconds: null           # int -- spreads have no broker stop
   vertical_exit_poll_seconds: null      # int -- closing mleg loop cadence
 
 # --- Agent runtime, shared by the generic runner ---------------------------
 agent_runtime:
   model: "REPLACE_ME"                   # Anthropic model id
-  max_output_tokens: null               # int
-  temperature: null                     # float
+  max_output_tokens: null               # int -- must cover thinking + the JSON
+  effort: null                          # str -- low|medium|high|xhigh|max, or ""
   timeout_seconds: null                 # float -- timeout on entry path = skip
   max_validation_retries: null          # int -- one retry, then fail closed
   log_full_response: true               # bool -- decision log completeness
+  # Backstop against a model restating its instructions into a log that may
+  # be published. Overlap is measured in word n-grams against the prompt that
+  # produced the response; above the threshold response_raw is withheld.
+  response_ngram_size: null             # int -- n-gram width for the overlap check
+  response_prompt_overlap_max: null     # float, 0.0-1.0 -- withhold above this
+  # SDK-level retries, NOT the validator's single retry. The runner bounds a
+  # call in wall-clock; an SDK retry schedule can spend that budget without
+  # surfacing the first error, so the call reads as a hung provider rather than
+  # as the 429 it was. 0 leaves the runner as the only thing that retries.
+  sdk_max_retries: null                 # int
 
 # --- Per-agent thresholds --------------------------------------------------
 agents:
@@ -204,6 +220,14 @@ agents:
 # it exists so the de-risking spike has no inline literals either.
 # --- Execution loops. Not agents; these are our own control cadences. ------
 execution:
+  entry_fill_timeout_seconds: null       # int -- entry is a passive mid limit;
+                                        #   this is "filled or not", not patience
+  exit_steps_high: null                 # int -- rungs on the mid->bid ladder
+  exit_steps_medium: null               # int
+  exit_steps_low: null                  # int
+  exit_step_seconds_high: null          # int -- seconds per rung
+  exit_step_seconds_medium: null        # int
+  exit_step_seconds_low: null           # int
   entry_reprice_cadence_seconds: null   # int -- entry manager cancel/replace
                                         #   clock. Must NOT reuse an agent
                                         #   cadence: entry repricing and exit

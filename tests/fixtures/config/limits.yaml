@@ -52,6 +52,7 @@ prefilter:
   max_spread_pct_of_mid: 0.06  # float, e.g. 0.05 == 5%
   min_bid: 0.3  # float, dollars
   monthly_min_sessions: 1  # int, floor for the chosen monthly expiry
+  apply_metric_bands: false  # bool -- off in the fixture on purpose
   require_monthly_expiry: false  # bool, reject non-monthly expiries
   prefer_monthly_expiry: false  # bool, rank monthlies above weeklies
   strike_window_pct: 0.1  # float, +/- around spot. NARROWS the
@@ -74,7 +75,6 @@ signals:
 # --- Computed metrics: acceptance bands ------------------------------------
 metrics:
   realized_vol_window_days: 20  # int, sessions for close-to-close RV
-  modeled_hold_hours: 18.0  # float, hold assumed by modeled P&L
   modeled_hold_sessions: 3  # int
   theta_day_hours: 24.0  # float, hours per theta-day (24 =
                                         #   calendar basis, as Alpaca quotes it)
@@ -82,7 +82,7 @@ metrics:
                                         #   discounted per ATR of breakeven
                                         #   distance when ranking verticals
   max_theta_pct_per_day: 0.05  # float, theta / premium
-  min_gamma: 0.001  # float
+  min_gamma_per_1pct: 0.001  # float
   max_iv_vs_rv_ratio: 1.5  # float
   max_spread_cost_pct_of_premium: 0.08  # float
   max_breakeven_move_pct: 0.05  # float, underlying move to breakeven
@@ -130,19 +130,22 @@ exits:
   trail_giveback_pct: 15.0  # float, positive
   scale_out_fraction: 0.5  # float, 0.0-1.0
   max_hold_minutes: 1950  # int
+  max_hold_sessions: 5  # int
+  min_sessions_to_expiry: 5  # int
   poll_interval_seconds: 30  # int -- spreads have no broker stop
   vertical_exit_poll_seconds: 30  # int -- closing mleg loop cadence
 
 # --- Agent runtime, shared by the generic runner ---------------------------
 agent_runtime:
   model: "claude-sonnet-5"                   # Anthropic model id
-  max_output_tokens: 1024  # int
-  temperature: 0.0  # float
+  max_output_tokens: 4096  # int
+  effort: "low"  # str
   timeout_seconds: 20.0  # float -- timeout on entry path = skip
   max_validation_retries: 1  # int -- one retry, then fail closed
   log_full_response: true               # bool -- decision log completeness
   response_ngram_size: 8  # int
   response_prompt_overlap_max: 0.25  # float
+  sdk_max_retries: 0  # int
 
 # --- Per-agent thresholds --------------------------------------------------
 agents:
@@ -198,6 +201,13 @@ agents:
 
 # --- Execution loops -------------------------------------------------------
 execution:
+  entry_fill_timeout_seconds: 20  # int
+  exit_steps_high: 2  # int
+  exit_steps_medium: 3  # int
+  exit_steps_low: 4  # int
+  exit_step_seconds_high: 5  # int
+  exit_step_seconds_medium: 10  # int
+  exit_step_seconds_low: 20  # int
   entry_reprice_cadence_seconds: 30  # int, synthetic
 
 roundtrip:
