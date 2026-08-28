@@ -1,17 +1,27 @@
-"""Step 1 -- broker round trip. The milestone that de-risks everything downstream.
+"""Step 1 -- broker round trip, now through the real order path.
 
-Connect, fetch a chain for one symbol, pick one contract by a deterministic
-rule, buy to open, read the position back, close it.
+Originally a self-contained spike: it carried its own chain fetch, its own
+snapshot batching, its own candidate filter and its own order construction,
+because none of those existed yet. All four exist now, so the duplicates are
+gone and this drives the same modules a live session drives:
 
-No agents. No indicators. No signal engine. The point is to find out what
-Alpaca actually does before any of that is built on top of assumptions.
+* ``src.brokers.alpaca.contracts`` and ``.quotes`` for the chain
+* ``src.options.prefilter`` for the survivor set -- the real one, bands and all
+* ``src.brokers.alpaca.orders`` for the passive mid entry and the stepped exit
+* ``src.brokers.alpaca.positions`` for a reconciled read-back
 
-    python -m cli.step1_roundtrip --symbol SPY
-    python -m cli.step1_roundtrip --symbol SPY --dry-run   # no order placed
+    python -m cli.step1_roundtrip --symbol SPY --dry-run   # reads only
+    python -m cli.step1_roundtrip --symbol SPY             # places real orders
 
-``--dry-run`` performs every read and prints the contract it *would* buy.
-Without it, this places real paper orders -- unless ``ALPACA_MOCK`` is set,
-which makes every write raise.
+**What this proves is different now.** The original proved the *broker* works.
+This proves the *order builder* works -- that a contract chosen by the real
+prefilter, priced by the real quote layer, sized as one contract, entered at a
+passive mid and exited on the stepped ladder, completes a round trip and reads
+back closed.
+
+``--dry-run`` performs every read and places nothing. Without it this places
+real paper orders, unless ``ALPACA_MOCK`` is set, which makes every write
+raise.
 """
 
 from __future__ import annotations
@@ -19,21 +29,10 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-import time
-from dataclasses import dataclass, field
-from datetime import date
-from typing import Any, Iterable
+from datetime import date, timedelta
+from typing import Any
 
-from alpaca.data.requests import OptionSnapshotRequest, StockLatestTradeRequest
-from alpaca.trading.enums import (
-    ContractType,
-    OrderSide,
-    OrderStatus,
-    PositionIntent,
-    TimeInForce,
-)
-from alpaca.trading.requests import GetOptionContractsRequest, LimitOrderRequest
-
+from src.brokers.alpaca.cache import MarketDataCache
 from src.brokers.alpaca.calendar import (
     DteError,
     TradingCalendar,
@@ -45,398 +44,99 @@ from src.brokers.alpaca.client import (
     BrokerError,
     account_summary,
     build_clients,
-    sizing_capital,
     with_retry,
 )
+from src.brokers.alpaca.orders import (
+    SHARES_PER_CONTRACT,
+    ExecutionLimits,
+    is_filled,
+    place_entry,
+    place_exit,
+    step_ladder,
+    urgency_for,
+)
+from src.brokers.alpaca.positions import read_position
+from src.brokers.alpaca.quotes import fetch_snapshots
 from src.config import Config, ConfigError, load_config
-from src.options.occ import parse as parse_occ
+from src.options.metrics import realized_volatility
+from src.options.prefilter import Candidate, PrefilterResult, run_prefilter
+from src.signals.indicators import atr as atr_indicator
 
 log = logging.getLogger("step1")
 
-# One contract controls 100 shares. Not a tunable -- it is the contract spec.
-SHARES_PER_CONTRACT = 100
+EXIT_REASON = "roundtrip"
+"""Not one of the real exit reasons.
+
+``urgency_for`` maps an unknown reason to HIGH, which is what this wants: the
+round trip is closing a position it opened seconds ago purely to prove the
+path, and there is nothing to be patient for.
+"""
 
 
-# ---------------------------------------------------------------------------
-# Chain discovery
-# ---------------------------------------------------------------------------
+def underlying_bars(clients: AlpacaClients, symbol: str, days: int = 120) -> Any:
+    """Daily bars for spot, ATR and realised vol -- the prefilter's inputs."""
+    from alpaca.data.requests import StockBarsRequest
+    from alpaca.data.timeframe import TimeFrame
 
-
-@dataclass(frozen=True)
-class Candidate:
-    """One contract with live quote data and every filter verdict recorded."""
-
-    symbol: str
-    strike: float
-    expiry: date
-    session_dte: int
-    open_interest: int
-    bid: float
-    ask: float
-    delta: float | None
-    failures: tuple[str, ...] = field(default=())
-
-    @property
-    def survived(self) -> bool:
-        return not self.failures
-
-    @property
-    def mid(self) -> float:
-        return (self.bid + self.ask) / 2.0
-
-    @property
-    def spread(self) -> float:
-        return self.ask - self.bid
-
-    @property
-    def spread_pct_of_mid(self) -> float:
-        return self.spread / self.mid if self.mid > 0 else float("inf")
-
-
-def underlying_price(clients: AlpacaClients, symbol: str) -> float:
-    """Latest trade price. Basic plan means IEX only -- a partial view of the
-    tape, which is fine for picking a strike and is disclosed in the write-up."""
-    request = StockLatestTradeRequest(symbol_or_symbols=symbol, feed=clients.equities_feed)
-    trades = with_retry(
-        clients.config, f"latest_trade({symbol})",
-        lambda: clients.stocks.get_stock_latest_trade(request),
+    request = StockBarsRequest(
+        symbol_or_symbols=symbol,
+        timeframe=TimeFrame.Day,
+        start=date.today() - timedelta(days=days),
+        feed=clients.equities_feed,
     )
-    return float(trades[symbol].price)
+    frame = clients.stocks.get_stock_bars(request).df
+    if frame.empty:
+        raise BrokerError(f"{symbol}: no daily bars returned")
+    if "symbol" in frame.index.names:
+        frame = frame.xs(symbol, level="symbol")
+    return frame
 
 
-def fetch_contracts(
-    clients: AlpacaClients,
-    symbol: str,
-    spot: float,
-    calendar: TradingCalendar,
-    order_session: date,
-) -> list[Any]:
-    """Paginated contract discovery, bounded by *trading sessions*.
+def scan(clients: AlpacaClients, symbol: str, calendar: TradingCalendar,
+         order_session: date, cache: MarketDataCache) -> PrefilterResult:
+    """The real prefilter. No local reimplementation of any of it."""
+    limits = clients.config.limits
+    bars = underlying_bars(clients, symbol)
+    spot = float(bars["close"].iloc[-1])
+    atr = float(atr_indicator(bars, limits.get_int("signals.atr_period")).iloc[-1])
+    rv = realized_volatility(
+        list(bars["close"]), limits.get_int("metrics.realized_vol_window_days")
+    )
+    log.info("%s spot %.2f atr %.3f rv %.1f%%", symbol, spot, atr, rv * 100)
 
-    Three things CLAUDE.md warns about, handled explicitly: the default
-    ``expiration_date_lte`` is next weekend, so both date bounds are always
-    passed; results are paginated via ``page_token``; and the bounds are
-    derived from the session an order would belong to, not from today. A scan
-    run on Saturday must not treat Monday's expiry as 2 days out -- it is zero
-    sessions out, and unbuyable.
-    """
-    cfg = clients.config
-    dte_min = cfg.limits.get_int("prefilter.dte_min")
-    dte_max = cfg.limits.get_int("prefilter.dte_max")
-    window = cfg.limits.get_float("roundtrip.strike_window_pct")
-    option_type = cfg.limits.get_str("roundtrip.option_type")
-    page_limit = cfg.limits.get_int("broker.contracts_page_limit")
-
-    gte = calendar.session_offset(order_session, dte_min)
-    lte = calendar.session_offset(order_session, dte_max)
-    log.info(
-        "order session %s -> expiry window %s..%s (%d-%d trading sessions)",
-        order_session, gte, lte, dte_min, dte_max,
+    return run_prefilter(
+        clients, symbol, spot, atr, rv, calendar, order_session,
+        option_type=limits.get_str("roundtrip.option_type"),
+        cache=cache,
     )
 
-    collected: list[Any] = []
-    page_token: str | None = None
-    while True:
-        request = GetOptionContractsRequest(
-            underlying_symbols=[symbol],
-            status="active",
-            expiration_date_gte=gte,
-            expiration_date_lte=lte,
-            strike_price_gte=str(round(spot * (1 - window), 2)),
-            strike_price_lte=str(round(spot * (1 + window), 2)),
-            type=ContractType(option_type),
-            limit=page_limit,
-            page_token=page_token,
-        )
-        page = with_retry(
-            cfg, f"get_option_contracts({symbol})",
-            lambda r=request: clients.trading.get_option_contracts(r),
-        )
-        collected.extend(page.option_contracts or [])
-        page_token = getattr(page, "next_page_token", None)
-        if not page_token:
-            break
 
-    log.info("contracts: %d, strikes within %.0f%% of %.2f", len(collected), window * 100, spot)
-    return collected
+def select(result: PrefilterResult) -> Candidate:
+    """The top-ranked survivor.
 
-
-def fetch_snapshots(clients: AlpacaClients, symbols: list[str]) -> dict[str, Any]:
-    """Quotes and greeks. Batched -- the contract list can be a few hundred wide."""
-    cfg = clients.config
-    out: dict[str, Any] = {}
-    batch_size = cfg.limits.get_int("broker.contracts_page_limit")
-    for start in range(0, len(symbols), batch_size):
-        batch = symbols[start : start + batch_size]
-        request = OptionSnapshotRequest(symbol_or_symbols=batch, feed=clients.options_feed)
-        page = with_retry(
-            cfg, f"option_snapshots({len(batch)})",
-            lambda r=request: clients.options.get_option_snapshot(r),
-        )
-        out.update(page)
-    return out
-
-
-def build_candidates(
-    clients: AlpacaClients,
-    contracts: Iterable[Any],
-    calendar: TradingCalendar,
-    order_session: date,
-) -> list[Candidate]:
-    """Evaluate **every** filter against **every** contract, recording all failures.
-
-    First-match attribution lies. On Saturday's SPY scan it reported
-    ``no delta = 0`` while 294 contracts were in fact missing greeks -- they
-    had already been consumed by an earlier filter, so the counter never
-    fired, and the breakdown looked like greeks were universally available.
-
-    A contract may therefore appear under several reasons, and the reason
-    counts sum to more than the number rejected. That is the point: the
-    breakdown answers "how many contracts fail this test", which is the
-    question worth asking when tuning a threshold.
+    The prefilter already ranks by modelled P&L per unit of spread cost, which
+    is the same ordering Agent 4 is offered. Taking the top one makes this
+    round trip exercise the contract the live path would actually reach for --
+    the old spike's own nearest-expiry-then-nearest-delta rule tested a
+    selection nothing else used.
     """
-    cfg = clients.config
-    min_oi = cfg.limits.get_int("prefilter.min_open_interest")
-    min_bid = cfg.limits.get_float("prefilter.min_bid")
-    max_spread_pct = cfg.limits.get_float("prefilter.max_spread_pct_of_mid")
-    delta_min = cfg.limits.get_float("prefilter.delta_min")
-    delta_max = cfg.limits.get_float("prefilter.delta_max")
-    dte_min = cfg.limits.get_int("prefilter.dte_min")
-    dte_max = cfg.limits.get_int("prefilter.dte_max")
-
-    by_symbol = {c.symbol: c for c in contracts}
-    snapshots = fetch_snapshots(clients, list(by_symbol))
-
-    out: list[Candidate] = []
-    for symbol, contract in by_symbol.items():
-        failures: list[str] = []
-        snapshot = snapshots.get(symbol)
-        quote = getattr(snapshot, "latest_quote", None) if snapshot else None
-        greeks = getattr(snapshot, "greeks", None) if snapshot else None
-
-        bid = float(getattr(quote, "bid_price", 0) or 0.0)
-        ask = float(getattr(quote, "ask_price", 0) or 0.0)
-        delta = None
-        if greeks is not None and getattr(greeks, "delta", None) is not None:
-            delta = float(greeks.delta)
-
-        # --- every test runs; none short-circuits ---
-        if quote is None:
-            failures.append("no quote")
-        if bid <= 0 or ask <= 0 or ask < bid:
-            failures.append("crossed/empty quote")
-        if bid < min_bid:
-            failures.append("bid below floor")
-        if int(contract.open_interest or 0) < min_oi:
-            failures.append("open interest")
-
-        mid = (bid + ask) / 2.0
-        if mid <= 0 or (ask - bid) / mid > max_spread_pct:
-            failures.append("spread")
-
-        if greeks is None:
-            failures.append("no greeks")
-        if delta is None:
-            failures.append("no delta")
-        elif not (delta_min <= abs(delta) <= delta_max):
-            failures.append("delta band")
-
-        session_dte = calendar.sessions_until(contract.expiration_date, order_session)
-        if session_dte < dte_min or session_dte > dte_max:
-            failures.append(f"session dte ({session_dte})" if session_dte >= 0 else "expired")
-
-        # Cheap integrity check: our parse must agree with Alpaca's own fields.
-        try:
-            parsed = parse_occ(symbol)
-            if parsed.strike != float(contract.strike_price) or parsed.expiry != contract.expiration_date:
-                failures.append("occ mismatch")
-        except Exception:  # noqa: BLE001
-            failures.append("occ unparseable")
-
-        out.append(
-            Candidate(
-                symbol=symbol,
-                strike=float(contract.strike_price),
-                expiry=contract.expiration_date,
-                session_dte=session_dte,
-                open_interest=int(contract.open_interest or 0),
-                bid=bid,
-                ask=ask,
-                delta=delta,
-                failures=tuple(failures),
-            )
-        )
-    return out
-
-
-def rejection_report(candidates: list[Candidate]) -> dict[str, Any]:
-    """Multi-label breakdown. Reason counts intentionally sum above the total."""
-    counts: dict[str, int] = {}
-    sole: dict[str, int] = {}
-    for candidate in candidates:
-        for reason in candidate.failures:
-            counts[reason] = counts.get(reason, 0) + 1
-        if len(candidate.failures) == 1:
-            only = candidate.failures[0]
-            sole[only] = sole.get(only, 0) + 1
-
-    rejected = sum(1 for c in candidates if not c.survived)
-    return {
-        "total": len(candidates),
-        "survivors": len(candidates) - rejected,
-        "rejected": rejected,
-        "counts": dict(sorted(counts.items(), key=lambda kv: -kv[1])),
-        "sole_reason": sole,
-    }
-
-
-def print_rejection_report(report: dict[str, Any]) -> None:
-    print(f"\n--- liquidity filter ({report['total']} contracts) ---")
-    print(f"  {'reason':<24} {'fails':>6} {'sole':>6}")
-    for reason, count in report["counts"].items():
-        print(f"  {reason:<24} {count:>6} {report['sole_reason'].get(reason, 0):>6}")
-    print(f"  {'-' * 38}")
-    print(f"  {'rejected':<24} {report['rejected']:>6}")
-    print(f"  {'SURVIVORS':<24} {report['survivors']:>6}")
-    print("  (a contract can fail several tests; 'fails' sums above 'rejected'.")
-    print("   'sole' is how many were rejected by that reason alone.)")
-
-
-def select_contract(config: Config, candidates: list[Candidate]) -> Candidate:
-    """Nearest expiry, then closest to the target delta. Deterministic and total."""
-    survivors = [c for c in candidates if c.survived]
-    if not survivors:
-        raise BrokerError("no contract survived the deterministic filter")
-    target = config.limits.get_float("roundtrip.target_delta")
-    return min(survivors, key=lambda c: (c.expiry, abs(abs(c.delta or 0.0) - target), c.symbol))
-
-
-# ---------------------------------------------------------------------------
-# Order round trip
-# ---------------------------------------------------------------------------
-
-
-def _round_penny(value: float) -> float:
-    return round(value + 1e-9, 2)
-
-
-def check_affordable(clients: AlpacaClients, candidate: Candidate, qty: int) -> float:
-    """Premium must fit inside sizing capital -- never margin buying power."""
-    account = with_retry(clients.config, "get_account", clients.trading.get_account)
-    capital = sizing_capital(account)
-    premium = candidate.ask * SHARES_PER_CONTRACT * qty
-    if premium > capital:
+    if not result.top:
         raise BrokerError(
-            f"premium {premium:.2f} exceeds sizing capital {capital:.2f} "
-            f"(options_buying_power/equity, not margin buying power)"
+            f"{result.symbol}: no contract survived the prefilter "
+            f"({len(result.candidates)} scanned). Reasons: {result.reason_counts}"
         )
-    return premium
+    return result.top[0]
 
 
-def wait_for_fill(clients: AlpacaClients, order_id: str) -> Any:
-    """Poll until filled, terminal, or the configured timeout expires.
-
-    On timeout the order is cancelled rather than left resting. A resting entry
-    order that fills later, unattended, is exactly what the time-stop exists to
-    prevent.
-    """
-    cfg = clients.config
-    timeout = cfg.limits.get_int("roundtrip.fill_timeout_seconds")
-    interval = cfg.limits.get_int("exits.poll_interval_seconds")
-    terminal = {OrderStatus.FILLED, OrderStatus.CANCELED, OrderStatus.EXPIRED, OrderStatus.REJECTED}
-
-    deadline = time.monotonic() + timeout
-    order = with_retry(cfg, "get_order", lambda: clients.trading.get_order_by_id(order_id))
-    while order.status not in terminal and time.monotonic() < deadline:
-        time.sleep(min(interval, max(1, int(deadline - time.monotonic()))))
-        order = with_retry(cfg, "get_order", lambda: clients.trading.get_order_by_id(order_id))
-
-    if order.status not in terminal:
-        log.warning("order %s still %s after %ds -- cancelling", order_id, order.status, timeout)
-        with_retry(cfg, "cancel_order", lambda: clients.trading.cancel_order_by_id(order_id))
-        order = with_retry(cfg, "get_order", lambda: clients.trading.get_order_by_id(order_id))
-    return order
-
-
-def submit(clients: AlpacaClients, request: LimitOrderRequest, description: str) -> Any:
-    clients.assert_writable(description)
-    order = with_retry(clients.config, description, lambda: clients.trading.submit_order(request))
-    log.info("%s submitted: id=%s %s %s @ %s", description, order.id, order.side,
-             order.symbol, order.limit_price)
-    return wait_for_fill(clients, str(order.id))
-
-
-def buy_to_open(
-    clients: AlpacaClients,
-    candidate: Candidate,
-    calendar: TradingCalendar,
-) -> Any:
-    """Marketable limit, never a bare market order.
-
-    The session-DTE floor is re-checked *here*, against the session this order
-    will actually belong to, computed now rather than at scan time. That is the
-    check that stops a contract selected hours earlier from being bought at
-    0DTE.
-    """
-    cfg = clients.config
-    qty = cfg.limits.get_int("roundtrip.qty")
-    pad = cfg.limits.get_float("roundtrip.entry_limit_pad_pct")
-
-    order_session = calendar.order_session(now_et())
-    dte = assert_dte_within_band(
-        calendar,
-        candidate.expiry,
-        order_session,
-        cfg.limits.get_int("prefilter.dte_min"),
-        cfg.limits.get_int("prefilter.dte_max"),
-        candidate.symbol,
-    )
-    log.info("entry check: %s is %d session(s) from the %s session", candidate.symbol, dte, order_session)
-    check_affordable(clients, candidate, qty)
-
-    request = LimitOrderRequest(
-        symbol=candidate.symbol,
-        qty=qty,
-        side=OrderSide.BUY,
-        type="limit",
-        time_in_force=TimeInForce.DAY,
-        limit_price=_round_penny(candidate.ask * (1 + pad)),
-        position_intent=PositionIntent.BUY_TO_OPEN,
-    )
-    return submit(clients, request, "buy_to_open")
-
-
-def sell_to_close(clients: AlpacaClients, position: Any) -> Any:
-    cfg = clients.config
-    pad = cfg.limits.get_float("roundtrip.exit_limit_pad_pct")
-    quotes = fetch_snapshots(clients, [position.symbol])
-    quote = getattr(quotes.get(position.symbol), "latest_quote", None)
-    bid = float(quote.bid_price) if quote and quote.bid_price else float(position.current_price or 0)
-    request = LimitOrderRequest(
-        symbol=position.symbol,
-        qty=abs(int(float(position.qty))),
-        side=OrderSide.SELL,
-        type="limit",
-        time_in_force=TimeInForce.DAY,
-        limit_price=max(0.01, _round_penny(bid * (1 - pad))),
-        position_intent=PositionIntent.SELL_TO_CLOSE,
-    )
-    return submit(clients, request, "sell_to_close")
-
-
-def read_position(clients: AlpacaClients, symbol: str) -> Any | None:
-    try:
-        return with_retry(
-            clients.config, "get_position", lambda: clients.trading.get_open_position(symbol)
-        )
-    except Exception as exc:  # noqa: BLE001 -- absence is a normal answer here
-        log.info("no open position for %s (%s)", symbol, exc)
-        return None
-
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
+def print_rejections(result: PrefilterResult) -> None:
+    print(f"\n--- prefilter ({len(result.candidates)} contracts, "
+          f"expiry {result.target_expiry}, {result.target_session_dte} sessions) ---")
+    print(f"  {'reason':<26} {'fails':>6} {'sole':>6}")
+    sole = result.sole_reason
+    for reason, count in result.reason_counts.items():
+        print(f"  {reason:<26} {count:>6} {sole.get(reason, 0):>6}")
+    print(f"  {'-' * 40}")
+    print(f"  {'SURVIVORS':<26} {len(result.survivors):>6}")
 
 
 def _report(title: str, rows: dict[str, Any]) -> None:
@@ -483,27 +183,42 @@ def main(argv: list[str] | None = None) -> int:
         "mock mode (ALPACA_MOCK)": clients.mock,
     })
 
-    spot = underlying_price(clients, symbol)
-    contracts = fetch_contracts(clients, symbol, spot, calendar, order_session)
-    candidates = build_candidates(clients, contracts, calendar, order_session)
-    print_rejection_report(rejection_report(candidates))
+    cache = MarketDataCache.from_config(config)
+    try:
+        result = scan(clients, symbol, calendar, order_session, cache)
+    except DteError as exc:
+        print(f"\nscan refused: {exc}", file=sys.stderr)
+        return 9
+    print_rejections(result)
 
     try:
-        chosen = select_contract(config, candidates)
+        chosen = select(result)
     except BrokerError as exc:
         print(f"\n{exc}", file=sys.stderr)
         return 8
 
+    quote = chosen.quote
+    metrics = chosen.metrics
     _report("selected contract", {
         "symbol": chosen.symbol,
-        "underlying": f"{symbol} @ {spot:.2f}",
-        "strike": chosen.strike,
-        "expiry": f"{chosen.expiry}  ({chosen.session_dte} trading sessions out)",
-        "bid/ask": f"{chosen.bid:.2f} / {chosen.ask:.2f}",
-        "spread": f"{chosen.spread:.2f} ({chosen.spread_pct_of_mid:.1%} of mid)",
-        "delta": chosen.delta,
-        "open_interest": chosen.open_interest,
-        "premium (1 contract)": f"{chosen.ask * SHARES_PER_CONTRACT:.2f}",
+        "underlying": f"{symbol} @ {result.spot:.2f}",
+        "strike": chosen.spec.strike,
+        "expiry": f"{chosen.spec.expiry}  ({chosen.session_dte} sessions out)",
+        "bid/ask": f"{quote.bid:.2f} / {quote.ask:.2f}",
+        "mid": f"{quote.mid:.2f}",
+        "spread": f"{quote.spread:.2f} ({quote.spread_pct_of_mid:.2%} of mid)",
+        "delta": f"{quote.delta:.4f}",
+        "open_interest": chosen.spec.open_interest,
+        "pnl_to_spread_ratio": f"{metrics.pnl_to_spread_ratio:.2f}",
+        "premium (1 contract)": f"{quote.mid * SHARES_PER_CONTRACT:.2f}",
+    })
+
+    limits = ExecutionLimits.from_limits(config.limits)
+    _report("planned orders", {
+        "entry": f"passive mid limit @ {quote.mid:.2f}",
+        "entry timeout": f"{limits.entry_fill_timeout_seconds}s",
+        "exit reason": f"{EXIT_REASON} -> urgency {urgency_for(EXIT_REASON).value}",
+        "exit ladder": step_ladder(quote, limits.exit_steps[urgency_for(EXIT_REASON)]),
     })
 
     if args.dry_run:
@@ -515,41 +230,72 @@ def main(argv: list[str] | None = None) -> int:
               "Re-run during regular hours, or use --dry-run.", file=sys.stderr)
         return 4
 
+    # Re-checked here, against the session this order will actually belong to.
+    # A contract selected minutes ago must not be bought at 0DTE.
     try:
-        entry = buy_to_open(clients, chosen, calendar)
+        assert_dte_within_band(
+            calendar, chosen.spec.expiry, order_session,
+            config.limits.get_int("prefilter.dte_min"),
+            config.limits.get_int("prefilter.dte_max"),
+            chosen.symbol,
+        )
     except DteError as exc:
         print(f"\nentry rejected: {exc}", file=sys.stderr)
         return 9
 
+    entry = place_entry(
+        clients, symbol=chosen.symbol, qty=config.limits.get_int("roundtrip.qty"),
+        quote=quote, limits=limits,
+    )
     _report("entry order", {
-        "id": entry.id, "status": entry.status, "filled_qty": entry.filled_qty,
-        "filled_avg_price": entry.filled_avg_price, "limit_price": entry.limit_price,
+        "id": entry.order_id, "status": entry.status,
+        "limit": entry.limit_prices, "filled_qty": entry.filled,
+        "filled_avg_price": entry.fill_price,
     })
-    if entry.status != OrderStatus.FILLED:
-        print(f"\nentry did not fill (status={entry.status}); nothing to close", file=sys.stderr)
+    if not is_filled(entry.order):
+        print(f"\nentry did not fill (status={entry.status}). A passive mid limit "
+              "fills or it does not -- that is the design, not a failure.",
+              file=sys.stderr)
         return 5
 
     position = read_position(clients, chosen.symbol)
     if position is None:
-        print("\nfilled but no position read back -- investigate before Step 2", file=sys.stderr)
+        print("\nfilled but no position read back -- investigate", file=sys.stderr)
         return 6
-    _report("position read back", {
-        "symbol": position.symbol, "qty": position.qty,
-        "avg_entry_price": position.avg_entry_price, "current_price": position.current_price,
-        "market_value": position.market_value, "unrealized_pl": position.unrealized_pl,
+    _report("position read back (reconciled from Alpaca)", {
+        "symbol": position.symbol, "underlying": position.underlying,
+        "qty": position.qty, "avg_entry_price": position.avg_entry_price,
+        "current_price": position.current_price,
+        "market_value": position.market_value,
+        "unrealized_pl": position.unrealized_pl,
+        "pnl_pct_of_premium": (
+            f"{position.pnl_pct():.2f}%" if position.pnl_pct() is not None else "unmarked"
+        ),
     })
 
-    exit_order = sell_to_close(clients, position)
+    fresh = fetch_snapshots(clients, [chosen.symbol])[chosen.symbol]
+    exit_order = place_exit(
+        clients, symbol=chosen.symbol, qty=abs(position.qty), quote=fresh,
+        reason=EXIT_REASON, limits=limits,
+        quote_reader=lambda: fetch_snapshots(clients, [chosen.symbol])[chosen.symbol],
+    )
     _report("exit order", {
-        "id": exit_order.id, "status": exit_order.status,
-        "filled_qty": exit_order.filled_qty, "filled_avg_price": exit_order.filled_avg_price,
+        "id": exit_order.order_id, "status": exit_order.status,
+        "ladder used": exit_order.limit_prices, "steps": exit_order.attempts,
+        "filled_qty": exit_order.filled, "filled_avg_price": exit_order.fill_price,
     })
 
     remaining = read_position(clients, chosen.symbol)
+    entry_fill, exit_fill = entry.fill_price, exit_order.fill_price
+    cost = None
+    if entry_fill and exit_fill:
+        cost = (entry_fill - exit_fill) / entry_fill * 100.0
     _report("round trip", {
         "contract": chosen.symbol,
-        "entry_fill": entry.filled_avg_price,
-        "exit_fill": exit_order.filled_avg_price,
+        "entry_fill": entry_fill,
+        "exit_fill": exit_fill,
+        "realised round trip cost": f"{cost:.2f}% of premium" if cost is not None else "n/a",
+        "quoted spread at entry": f"{quote.spread_pct_of_mid:.2%} of mid",
         "position_closed": remaining is None,
     })
     return 0 if remaining is None else 7
