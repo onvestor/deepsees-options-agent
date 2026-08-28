@@ -304,7 +304,13 @@ def test_missing_greek_on_either_leg_raises(leg):
 
 
 def test_credit_spreads_are_out_of_scope_by_construction():
-    """Level 3 covers debit structures only; there is no code path to a credit."""
+    """Out of scope by OUR choice, not by entitlement.
+
+    Alpaca permits credit verticals at Level 3 -- verified 26 Aug on the dev
+    account with a filled mleg at a net credit. This asserts that no code path
+    here constructs one anyway, because short premium carries assignment risk
+    the risk layer was not designed around.
+    """
     with pytest.raises(MetricError, match="out of scope"):
         vertical(long_bid=2.80, long_ask=2.90, short_bid=3.10, short_ask=3.20)
 

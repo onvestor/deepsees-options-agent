@@ -1,9 +1,16 @@
 """Single-leg option order construction and submission.
 
-**Debit structures only, one leg.** Verticals were designed, measured and not
-shipped -- see "Debit verticals are unconstructible at swing DTE" in CLAUDE.md.
-There is deliberately no ``mleg`` path here: an unused multi-leg builder would
-be code nobody has ever seen work, sitting next to the one path that has.
+**One leg, and debit only.** There is deliberately no ``mleg`` path here: an
+unused multi-leg builder would be code nobody has ever seen work, sitting next
+to the one path that has.
+
+Two separate reasons, worth keeping apart because they are not the same kind of
+fact. Verticals are not shipped because of **strike geometry** -- at the expiry
+this system buys, the delta bands and the width cap cannot both be satisfied,
+which is measured in CLAUDE.md under "Debit verticals are unconstructible at
+swing DTE". Credit structures are absent because of **our scope**: Alpaca does
+permit them at Level 3, verified 26 Aug with a filled mleg at a net credit, so
+the constraint is ours and not the broker's.
 
 Every constraint Alpaca imposes on an options order is enforced in code rather
 than trusted to the caller, because each one fails at submission with a message

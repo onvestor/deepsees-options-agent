@@ -460,8 +460,11 @@ def compute_vertical_metrics(
             raise MetricError(f"unusable {label} quote: bid={bid} ask={ask}")
 
     # A debit call spread buys the lower strike; a debit put spread buys the
-    # higher. Getting this backwards builds a *credit* spread, which is out of
-    # scope entirely -- Level 3 covers debit structures only.
+    # higher. Getting this backwards builds a *credit* spread. Alpaca permits
+    # those at Level 3 -- verified 26 Aug with a filled mleg at a net credit --
+    # so this raises as a matter of OUR scope, not of entitlement: short
+    # premium carries assignment risk this system's risk layer was not built
+    # around, and no code path here constructs one.
     if option_type == "call":
         if short_strike <= long_strike:
             raise MetricError(

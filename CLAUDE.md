@@ -412,9 +412,24 @@ of burning live market sessions. There are only five of those.
 
 These are verified against Alpaca's docs and are the things most likely to cost hours:
 
-**Options levels.** Paper accounts get Level 3 automatically. Level 3 covers long calls, long
-puts, **buy call spread, buy put spread** — debit structures only. Credit verticals are out of
-scope. Do not build short-premium paths.
+**Options levels — corrected 28 Aug.** Paper accounts get Level 3 automatically. Level 3 on
+the **Trading API** covers long calls, long puts, and **verticals in both directions —
+debit and credit**.
+
+This file previously said "debit structures only. Credit verticals are out of scope." **That
+was wrong** and is corrected here because this repository goes public: a reader would have
+taken it as a statement about Alpaca rather than about us. **Verified 26 Aug on the dev
+account:** an `mleg` order with `side: sell` at a net credit of 0.32 **filled**, with no
+entitlement error. Permission is not the constraint.
+
+**The Broker API sandbox is a different thing and blocks options entirely.** That is an API
+surface limitation, not an options-level one, and the two must not be conflated — a sandbox
+rejection says nothing about what Level 3 permits on the Trading API.
+
+**We still trade debit structures only, by choice rather than by permission.** Short premium
+carries assignment risk and an unbounded-until-the-long-leg loss profile that this system's
+risk layer was not designed around, and nothing in `src/` builds a credit path. That is a
+scope decision, and it should be described as one.
 
 **OCC symbols are unpadded.** Alpaca returns `AAPL240119C00100000` — no space padding of the
 root to six characters. Standard OSI padding will likely be rejected. Round-trip a real
@@ -638,12 +653,26 @@ expiry. On a long-dated contract over a 3-session hold a vertical barely moves �
 decay offsets the long leg's gain. If the Monday measurement lands on a long DTE band, Agent 4's
 structure guidance should favour single-leg heavily.
 
-### Debit verticals are unconstructible at swing DTE — measured 28 Aug
+### Debit verticals are unconstructible at swing DTE — geometry, not permission
+
+**This is a measurement about strike geometry, and it must not be read as a permission
+limit.** Alpaca permits verticals in both directions at Level 3 (see the corrected
+"Options levels" note above). Verticals are not shipped because at the expiry this system
+buys, the configured delta bands and width cap cannot both be satisfied — a fact about the
+shape of the chain, not about what the broker allows.
 
 **The two bands in the table above contradict each other at the expiry this system actually
 buys.** A 0.55–0.70 long leg and a 0.25–0.35 short leg in the same expiry are further apart in
 strike than `agents.a4.vertical_max_width` (15.0) permits, and the gap widens with both DTE and
-implied volatility. Measured on a modelled SPY chain at spot 500:
+implied volatility.
+
+**What was measured, exactly:** a *modelled* SPY-like chain at spot 500 from
+`replay/chain.py`, with implied volatility swept 0.10–0.35, at three expiries. The delta curve
+is Black-Scholes, so the *direction and the ordering* are sound and the *absolute widths* are
+indicative. **No live chain has been checked for this, and no single name has been checked at
+all** — the 28 Aug live work measured the metric acceptance bands across nine symbols, which is
+a different question. Confirming on one live index chain and one live single name is the
+outstanding step, and until it is done this is a modelled result, not a market one.
 
 | DTE | min achievable width | pairs inside 2.5–15.0 |
 | --- | --- | --- |
@@ -668,11 +697,11 @@ above says the nearer expiry is the one that matters. Confirm against a live cha
 table is from the replay chain model, whose delta curve is Black-Scholes and whose absolute
 widths are therefore indicative rather than exact.
 
-Two further reasons the answer would still be "single leg" even if pairs constructed:
-`src/brokers/alpaca/orders.py` does not exist — the only order-placing code is the Step 1 spike,
-single-leg — so verticals would add an `mleg` path to a component that has not had its first
-one; and there is no broker-side stop on a spread, so a multi-session vertical is unprotected
-overnight.
+One further reason the answer would still be "single leg" even if pairs constructed: there is
+no broker-side stop on a spread, so a multi-session vertical is unprotected between sessions.
+(`orders.py` now exists and is live-verified, so the earlier "the order builder does not exist"
+argument no longer applies — an `mleg` path would be an addition to a working component rather
+than its first one.)
 
 ---
 
