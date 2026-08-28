@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeepSees Options Agent</title>
+<style>
+  :root {
+    --bg:#0e1116; --panel:#161b22; --line:#262c36; --ink:#e6edf3; --dim:#8b949e;
+    --ok:#3fb950; --warn:#d29922; --bad:#f85149; --key:#58a6ff; --mute:#484f58;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  header {
+    padding:14px 20px; border-bottom:1px solid var(--line);
+    display:flex; gap:18px; align-items:baseline; flex-wrap:wrap;
+  }
+  h1 { font-size:15px; margin:0; letter-spacing:.5px; }
+  .sub { color:var(--dim); font-size:11px; }
+  nav { display:flex; gap:4px; padding:0 20px; border-bottom:1px solid var(--line); }
+  nav button {
+    background:none; border:none; border-bottom:2px solid transparent;
+    color:var(--dim); padding:10px 14px; cursor:pointer; font:inherit;
+  }
+  nav button.on { color:var(--ink); border-bottom-color:var(--key); }
+  main { padding:18px 20px 60px; }
+  section { display:none; } section.on { display:block; }
+  table { border-collapse:collapse; width:100%; font-size:12px; }
+  th,td { text-align:left; padding:4px 10px 4px 0; vertical-align:top; }
+  th { color:var(--dim); font-weight:normal; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); }
+  tr.g td { background:rgba(210,153,34,.07); }
+  tr.click { cursor:pointer; } tr.click:hover td { background:rgba(88,166,255,.10); }
+  .cards { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:12px 16px; min-width:150px; }
+  .card .n { font-size:20px; } .card .l { color:var(--dim); font-size:11px; }
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)} .dim{color:var(--dim)} .key{color:var(--key)}
+  .pill { font-size:10px; padding:1px 6px; border-radius:8px; border:1px solid var(--line); color:var(--dim); }
+  h2 { font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin:22px 0 8px; font-weight:normal; }
+  .bar { height:5px; background:var(--mute); border-radius:3px; overflow:hidden; width:120px; display:inline-block; vertical-align:middle;}
+  .bar i { display:block; height:100%; background:var(--ok); }
+  .note { color:var(--dim); font-size:11px; margin:6px 0 14px; max-width:78ch; }
+  .chain { border-left:2px solid var(--line); margin-left:8px; padding-left:14px; }
+  .step { margin:0 0 10px; }
+  .step .h { color:var(--key); }
+  .step.g { border-left:2px solid var(--warn); margin-left:-16px; padding-left:14px; }
+  pre { background:var(--panel); border:1px solid var(--line); border-radius:4px;
+        padding:8px 10px; overflow-x:auto; font-size:11px; color:var(--dim); margin:4px 0 0; }
+  select,input { background:var(--panel); color:var(--ink); border:1px solid var(--line);
+                 border-radius:4px; padding:3px 6px; font:inherit; }
+  .ro { border:1px solid var(--line); border-radius:4px; padding:2px 8px; color:var(--dim); font-size:11px; }
+  .wrap { overflow-x:auto; }
+</style>
+</head>
+<body>
+<header>
+  <h1>DeepSees Options Agent</h1>
+  <span class="sub" id="src">loading…</span>
+  <span style="flex:1"></span>
+  <span class="ro">read-only &middot; no controls &middot; no broker calls</span>
+  <select id="session"></select>
+</header>
+
+<nav>
+  <button data-v="status" class="on">Live status</button>
+  <button data-v="timeline">Session timeline</button>
+  <button data-v="traces">Decision trace</button>
+  <button data-v="guard">Guardrail events</button>
+</nav>
+
+<main>
+  <section id="status" class="on"></section>
+  <section id="timeline"></section>
+  <section id="traces"></section>
+  <section id="guard"></section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num = (v, d=2) => v === null || v === undefined ? '—' : Number(v).toFixed(d);
+let SESSION = null;
+
+async function api(path) {
+  const q = SESSION ? (path.includes('?') ? '&' : '?') + 'session=' + encodeURIComponent(SESSION) : '';
+  const r = await fetch('/api' + path + q);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+// ---------- view: live status ----------
+async function renderStatus() {
+  const s = await api('/status');
+  const stale = s.stale_seconds;
+  const staleClass = stale === null ? 'dim' : stale < 120 ? 'ok' : stale < 900 ? 'warn' : 'bad';
+  const staleText = stale === null ? 'no records' :
+        stale < 90 ? stale + 's ago' : Math.round(stale / 60) + ' min ago';
+
+  let h = `<div class="note">
+    Everything below is the <b>last state the decision log recorded</b> — not a live
+    broker read. If the session process stops, this stops moving, and the staleness
+    figure is how you tell. Positions and P&amp;L are reconstructed from logged fills.
+  </div><div class="cards">
+    <div class="card"><div class="n ${staleClass}">${staleText}</div><div class="l">last record</div></div>
+    <div class="card"><div class="n">${s.equity === null ? '—' : '$' + Number(s.equity).toLocaleString()}</div><div class="l">equity (logged)</div></div>
+    <div class="card"><div class="n ${s.realized_pnl_from_fills > 0 ? 'ok' : s.realized_pnl_from_fills < 0 ? 'bad' : ''}">${num(s.realized_pnl_from_fills)}</div><div class="l">realised from fills</div></div>
+    <div class="card"><div class="n">${s.positions_from_fills.length}</div><div class="l">open positions</div></div>
+    <div class="card"><div class="n">${s.fills}/${s.orders}</div><div class="l">fills / orders</div></div>
+    <div class="card"><div class="n ${s.halted ? 'bad' : 'ok'}">${s.halted ? 'HALTED' : 'trading'}</div><div class="l">entry state</div></div>
+  </div>`;
+
+  h += '<h2>Open positions (from logged fills)</h2>';
+  h += s.positions_from_fills.length
+    ? table(['contract','symbol','qty','entry','opened'],
+        s.positions_from_fills.map(p => [p.contract, p.symbol, p.qty, num(p.entry), p.opened]))
+    : '<div class="note">None recorded.</div>';
+
+  h += '<h2>Kill-switch headroom</h2><div class="note">Every switch is evaluated on every tick, fired or not — "we were one trade from the halt" is what a review needs, and a fired-only log cannot say it.</div>';
+  h += table(['switch','threshold','observed','headroom','state'],
+    s.killswitches.map(k => {
+      const frac = k.threshold > 0 ? Math.max(0, Math.min(1, k.observed / k.threshold)) : 0;
+      const cls = k.fired ? 'bad' : frac > 0.7 ? 'warn' : 'ok';
+      return [k.switch, num(k.threshold,4), num(k.observed,4),
+        `<span class="${cls}">${num(k.headroom,4)}</span> <span class="bar"><i style="width:${(frac*100).toFixed(0)}%;background:var(--${k.fired?'bad':frac>0.7?'warn':'ok'})"></i></span>`,
+        k.fired ? '<span class="bad">FIRED</span>' : '<span class="dim">ok</span>'];
+    }), true);
+
+  h += '<h2>Agent reliability</h2><div class="note">The same input the runner\'s kill switch reads: a model failing repeatedly is a broken input to every decision downstream, so it halts new entries the way a loss streak does.</div>';
+  h += table(['agent','calls','failed','clamped','failure rate','median ms','p95 ms'],
+    s.agents.map(a => [a.agent, a.calls, a.failed, a.clamped,
+      `<span class="${a.failure_rate > 0.2 ? 'bad' : a.failure_rate > 0 ? 'warn' : 'ok'}">${(a.failure_rate*100).toFixed(0)}%</span>`,
+      a.median_ms ?? '—', a.p95_ms ?? '—']), true);
+  $('#status').innerHTML = h;
+}
+
+// ---------- view: timeline ----------
+async function renderTimeline() {
+  const d = await api('/timeline');
+  let h = `<div class="note">Every decision this session, in order. Amber rows are guardrail events — a clamp, a force, a cap, a fail-closed skip, or a kill-switch verdict.</div>
+    <div class="cards"><div class="card"><div class="n">${d.count}</div><div class="l">decisions</div></div></div><div class="wrap">`;
+  h += table(['#','time','stage','actor','symbol','action','verdict','ms'],
+    d.rows.map(r => [r.seq, r.time, `<span class="pill">${esc(r.stage)}</span>`,
+      esc(r.actor), esc(r.symbol), esc(r.action), esc(r.verdict), r.latency_ms ?? '']),
+    true, d.rows.map(r => r.guardrail ? 'g' : ''));
+  $('#timeline').innerHTML = h + '</div>';
+}
+
+// ---------- view: decision trace ----------
+async function renderTraces() {
+  const d = await api('/traces');
+  let h = `<div class="note">One chain per entry attempt or exit decision. Click a row for the full causal chain: Agent 2's screen, the regime profile, the signal gates, the chain scan and why contracts were rejected, Agent 4's pick, Agent 3's sizing, and the order.</div>`;
+  const inferred = d.traces.filter(t => t.inferred).length;
+  if (inferred) h += `<div class="note warn">${inferred} of ${d.count} chains are <b>inferred</b> — those records predate trace ids and are grouped by symbol and proximity. A reconstructed chain is weaker evidence than a recorded one.</div>`;
+  h += '<div class="wrap">' + table(['#','start','symbol','steps','guardrails','outcome',''],
+    d.traces.map(t => [t.first_seq, t.start, esc(t.symbol), t.steps,
+      t.guardrails || '', esc(t.outcome),
+      `<span class="dim">${esc(t.outcome_detail)}</span>` + (t.inferred ? ' <span class="pill">inferred</span>' : '')]),
+    true, d.traces.map(() => 'click'), d.traces.map(t => t.trace_id));
+  h += '</div><div id="chain"></div>';
+  $('#traces').innerHTML = h;
+  document.querySelectorAll('#traces tr[data-id]').forEach(tr =>
+    tr.addEventListener('click', () => showChain(tr.dataset.id)));
+}
+
+async function showChain(id) {
+  const t = await api('/trace/' + encodeURIComponent(id));
+  let h = `<h2>${esc(t.trace_id)} — ${esc(t.symbol)} — ${esc(t.outcome)}</h2><div class="chain">`;
+  for (const s of t.chain) {
+    h += `<div class="step ${s.guardrail ? 'g' : ''}">
+      <div><span class="dim">${s.time}</span> <span class="pill">${esc(s.stage)}</span>
+      <span class="h">${esc(s.actor)}</span> <span class="dim">${esc(s.action)}</span>
+      ${s.latency_ms ? '<span class="dim">' + s.latency_ms + 'ms</span>' : ''}</div>
+      <div>${esc(s.verdict)}</div>${detail(s)}</div>`;
+  }
+  $('#chain').innerHTML = h + '</div>';
+  $('#chain').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function detail(s) {
+  const p = s.payload || {};
+  if (s.kind === 'prefilter' && p.reason_counts)
+    return `<pre>rejections: ${esc(JSON.stringify(p.reason_counts))}
+sole reason: ${esc(JSON.stringify(p.sole_reason || {}))}</pre>`;
+  if (s.kind === 'signal_eval' && p.gates)
+    return `<pre>gates: ${esc(JSON.stringify(p.gates))}</pre>`;
+  if (s.kind === 'agent_call' && p.response_parsed)
+    return `<pre>${esc(JSON.stringify(p.response_parsed, null, 1))}</pre>`;
+  if (s.kind === 'sizing')
+    return `<pre>capital ${num(p.sizing_capital)} · risk/trade ${num(p.risk_per_trade)} · premium ${num(p.premium_per_contract)}</pre>`;
+  return '';
+}
+
+// ---------- view: guardrails ----------
+async function renderGuard() {
+  const g = await api('/guardrails');
+  const s = g.summary;
+  let h = `<div class="note">The safety invariant, made visible. <b>A clamp and a force are different events</b>: a clamp means the model returned something invalid and code moved it to the nearest legal value; a force means it returned something perfectly legal and a rule overrode it anyway. Counting them together would make a well-behaved model on a choppy day look identical to one emitting garbage.</div>
+  <div class="cards">
+    <div class="card"><div class="n ${s.clamps?'warn':''}">${s.clamps}</div><div class="l">clamps</div></div>
+    <div class="card"><div class="n">${s.forces}</div><div class="l">forces</div></div>
+    <div class="card"><div class="n">${s.cap_overrides}</div><div class="l">cap overrides</div></div>
+    <div class="card"><div class="n">${s.skips}</div><div class="l">fail-closed skips</div></div>
+    <div class="card"><div class="n ${s.schema_retries?'warn':''}">${s.schema_retries}</div><div class="l">schema retries</div></div>
+    <div class="card"><div class="n ${s.killswitches_fired.length?'bad':'ok'}">${s.killswitch_evaluations}</div><div class="l">switch evaluations</div></div>
+  </div>`;
+
+  if (s.killswitches_fired.length)
+    h += `<div class="note bad">Fired this session: ${s.killswitches_fired.map(esc).join(', ')}</div>`;
+
+  h += '<h2>Clamps — the model returned an invalid value</h2>' + (g.clamps.length
+    ? table(['time','agent','symbol','field','model said','applied','rule'],
+        g.clamps.map(c => [c.time, c.agent, c.symbol, c.field, esc(JSON.stringify(c.model_value)), esc(JSON.stringify(c.applied_value)), c.rule]), true)
+    : '<div class="note">None. Every model response was inside its allowed set.</div>');
+
+  h += '<h2>Forces — a rule overrode a legal answer</h2>' + (g.forces.length
+    ? table(['time','agent','symbol','field','model said','applied','rule'],
+        g.forces.map(c => [c.time, c.agent, c.symbol, c.field, esc(JSON.stringify(c.model_value)), esc(JSON.stringify(c.applied_value)), c.rule]), true)
+    : '<div class="note">None.</div>');
+
+  h += '<h2>Cap overrides — caps always win</h2>' + (g.cap_overrides.length
+    ? table(['time','symbol','cap','stage','requested','cap','applied'],
+        g.cap_overrides.map(c => [c.time, c.symbol, c.cap, c.stage, num(c.requested), num(c.cap_value), num(c.applied)]), true)
+    : '<div class="note">None bound this session.</div>');
+
+  h += '<h2>Schema retries — malformed output, fed back once</h2>' + (g.schema_retries.length
+    ? table(['time','agent','symbol','attempt','status','errors'],
+        g.schema_retries.map(r => [r.time, r.agent, r.symbol, r.attempt, r.status, esc((r.errors||[]).join('; ')).slice(0,160)]), true)
+    : '<div class="note">None. Every response parsed first time.</div>');
+
+  h += '<h2>Fail-closed skips — where candidates died</h2>';
+  const byStage = {};
+  g.skips.forEach(k => byStage[k.stage] = (byStage[k.stage]||0)+1);
+  h += '<div class="note">' + Object.entries(byStage).sort((a,b)=>b[1]-a[1])
+      .map(([k,v]) => `<span class="pill">${esc(k)} ${v}</span>`).join(' ') + '</div>';
+  h += '<div class="wrap">' + table(['time','stage','symbol','reason'],
+    g.skips.map(k => [k.time, `<span class="pill">${esc(k.stage)}</span>`, k.symbol, esc(k.reason)]), true) + '</div>';
+  $('#guard').innerHTML = h;
+}
+
+// ---------- plumbing ----------
+function table(head, rows, raw=false, classes=null, ids=null) {
+  let h = '<table><thead><tr>' + head.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+  rows.forEach((r, i) => {
+    const cls = classes && classes[i] ? ` class="${classes[i]}"` : '';
+    const id = ids && ids[i] ? ` data-id="${esc(ids[i])}"` : '';
+    h += `<tr${cls}${id}>` + r.map(c => `<td>${raw ? c : esc(c)}</td>`).join('') + '</tr>';
+  });
+  return h + '</tbody></table>';
+}
+
+const VIEWS = {status:renderStatus, timeline:renderTimeline, traces:renderTraces, guard:renderGuard};
+let CURRENT = 'status';
+
+async function show(v) {
+  CURRENT = v;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  document.querySelectorAll('main section').forEach(s => s.classList.toggle('on', s.id === v));
+  try { await VIEWS[v](); }
+  catch (e) { $('#' + v).innerHTML = `<div class="note bad">${esc(e.message)}</div>`; }
+}
+
+document.querySelectorAll('nav button').forEach(b =>
+  b.addEventListener('click', () => show(b.dataset.v)));
+
+$('#session').addEventListener('change', e => { SESSION = e.target.value || null; show(CURRENT); });
+
+(async function init() {
+  try {
+    const s = await (await fetch('/api/sessions')).json();
+    $('#session').innerHTML = '<option value="">all sessions</option>' +
+      s.sessions.map(x => `<option>${esc(x)}</option>`).join('');
+    if (s.sessions.length) { SESSION = s.sessions[s.sessions.length-1]; $('#session').value = SESSION; }
+    $('#src').textContent = s.sessions.length + ' session(s) · ' + s.sources.length + ' log file(s)';
+  } catch (e) { $('#src').textContent = 'log unavailable'; }
+  show('status');
+  // The log grows while a session runs; a stale dashboard during a live
+  // session would be worse than a slightly chatty one.
+  setInterval(() => show(CURRENT), 30000);
+})();
+</script>
+</body>
+</html>
