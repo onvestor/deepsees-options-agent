@@ -146,6 +146,24 @@ class Log:
     def sessions(self) -> list[str]:
         return sorted({r.raw.get("session_date", "") for r in self.records if r.raw.get("session_date")})
 
+    def accounts_for(self, session: str | None = None) -> list[str]:
+        """Account suffixes that appear in a selection, from session records.
+
+        More than one means the selection mixes accounts -- a dev session and a
+        competition session in the same view. The caller must say so rather
+        than presenting the total as one account's activity.
+        """
+        found = {
+            r.payload.get("account")
+            for r in self.for_session(session)
+            if r.kind == "session" and r.payload.get("account")
+        }
+        return sorted(found)
+
+    def session_accounts(self) -> dict[str, list[str]]:
+        """Which account each session ran against. Empty list where unrecorded."""
+        return {s: self.accounts_for(s) for s in self.sessions}
+
     def for_session(self, session: str | None) -> list[Record]:
         if not session:
             return self.records
@@ -368,8 +386,12 @@ class Log:
             agents.append(entry)
 
         halted = any(s["fired"] for s in latest_switch.values())
+        accounts = self.accounts_for(session)
         return {
             "session": (last_record.raw.get("session_date") if last_record else None),
+            "accounts": accounts,
+            "account": accounts[0] if len(accounts) == 1 else None,
+            "mixed_accounts": len(accounts) > 1,
             "records": len(records),
             "last_record_at": last_record.ts_et if last_record else None,
             "stale_seconds": round(age) if age is not None else None,

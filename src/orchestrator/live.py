@@ -670,6 +670,7 @@ class LiveSession:
                 event="open" if state.may_open else "resume",
                 equity=float(account.equity),
                 open_positions=len(book),
+                account=_suffix(account),
                 notes=(f"phase={state.phase.value} premium={book.open_premium:.2f} "
                        f"entries={self.entries_this_session} skips={len(self.skips)}"),
             ),
@@ -719,6 +720,7 @@ class LiveSession:
         self._write(
             SessionPayload(
                 event="close", equity=float(account.equity), open_positions=len(book),
+                account=_suffix(account),
                 notes=(f"entries={self.entries_this_session} orders={self.orders_placed} "
                        f"fills={self.fills} skips={len(self.skips)} "
                        f"observations={len(result.observations)}"),
@@ -752,6 +754,17 @@ class LiveSession:
             "reconcile": self.reconcile_job,
             "a6_review": self.a6_review,
         }
+
+
+def _suffix(account: Any) -> str | None:
+    """Last four of the account number, read back from the broker.
+
+    Suffix only. The full number is operator state that CLAUDE.md keeps out of
+    the repository, and four characters are enough to tell a dev session from a
+    competition one -- which is the only question the log needs to answer.
+    """
+    number = str(getattr(account, "account_number", "") or "")
+    return number[-4:] or None
 
 
 def _trend(frame: Any, sessions: int) -> float:

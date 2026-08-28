@@ -83,7 +83,11 @@ def create_app(log_dir: Path | None = None) -> FastAPI:
     @app.get("/api/sessions")
     def sessions() -> dict[str, Any]:
         data = read(None)
-        return {"sessions": data.sessions, "sources": data.sources}
+        return {
+            "sessions": data.sessions,
+            "accounts": data.session_accounts(),
+            "sources": data.sources,
+        }
 
     @app.get("/api/timeline")
     def timeline(

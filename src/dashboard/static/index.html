@@ -98,7 +98,21 @@ async function renderStatus() {
   const staleText = stale === null ? 'no records' :
         stale < 90 ? stale + 's ago' : Math.round(stale / 60) + ' min ago';
 
-  let h = `<div class="note">
+  let h = '';
+  if (s.mixed_accounts) {
+    h += `<div class="note bad"><b>This view mixes ${s.accounts.length} accounts</b>
+      (${s.accounts.map(esc).join(', ')}). Pick a single session above — totals across
+      accounts are not one account's activity.</div>`;
+  } else if (s.account) {
+    h += `<div class="note">account <b class="key">…${esc(s.account)}</b> — read back
+      from the broker and recorded in the log, so this is what the session actually
+      traded rather than what it was configured to.</div>`;
+  } else {
+    h += `<div class="note warn">No account recorded in this session's log. Sessions
+      written before the account marker existed cannot prove which account produced
+      them; attribute them by date and say so.</div>`;
+  }
+  h += `<div class="note">
     Everything below is the <b>last state the decision log recorded</b> — not a live
     broker read. If the session process stops, this stops moving, and the staleness
     figure is how you tell. Positions and P&amp;L are reconstructed from logged fills.
@@ -269,8 +283,16 @@ $('#session').addEventListener('change', e => { SESSION = e.target.value || null
 (async function init() {
   try {
     const s = await (await fetch('/api/sessions')).json();
-    $('#session').innerHTML = '<option value="">all sessions</option>' +
-      s.sessions.map(x => `<option>${esc(x)}</option>`).join('');
+    const acct = s.accounts || {};
+    const label = x => {
+      const a = acct[x] || [];
+      return a.length === 1 ? `${x}  (…${a[0]})`
+           : a.length > 1 ? `${x}  (${a.length} accounts)`
+           : `${x}  (account unrecorded)`;
+    };
+    $('#session').innerHTML =
+      '<option value="">all sessions (mixes accounts)</option>' +
+      s.sessions.map(x => `<option value="${esc(x)}">${esc(label(x))}</option>`).join('');
     if (s.sessions.length) { SESSION = s.sessions[s.sessions.length-1]; $('#session').value = SESSION; }
     $('#src').textContent = s.sessions.length + ' session(s) · ' + s.sources.length + ' log file(s)';
   } catch (e) { $('#src').textContent = 'log unavailable'; }

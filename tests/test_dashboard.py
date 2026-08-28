@@ -365,3 +365,71 @@ def test_a_missing_log_directory_still_serves(tmp_path):
     client = TestClient(create_app(tmp_path / "empty"))
     assert client.get("/").status_code == 200
     assert client.get("/api/status").json()["records"] == 0
+
+
+# --- account attribution ---------------------------------------------------
+
+
+def test_a_session_reports_the_account_it_ran_against(tmp_path):
+    """Separation by date alone is an assertion; the log has to prove it."""
+    rows = [rec(1, "session", {"event": "open", "equity": 100000.0,
+                               "open_positions": 0, "account": "XYAO"})]
+    path = tmp_path / f"decision_log-{SESSION}.jsonl"
+    path.write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
+    log = Log.load([path])
+    assert log.accounts_for(SESSION) == ["XYAO"]
+    assert log.status()["account"] == "XYAO"
+    assert log.status()["mixed_accounts"] is False
+
+
+def test_a_view_spanning_two_accounts_is_flagged(tmp_path):
+    """Friday on dev and Monday on the competition account must not present as
+    one account's activity."""
+    dev = tmp_path / "decision_log-2026-08-28.jsonl"
+    dev.write_text(json.dumps({
+        **rec(1, "session", {"event": "close", "account": "XDIA"}),
+        "session_date": "2026-08-28",
+    }), encoding="utf-8")
+    comp = tmp_path / "decision_log-2026-08-31.jsonl"
+    comp.write_text(json.dumps({
+        **rec(1, "session", {"event": "close", "account": "XYAO"}),
+        "session_date": "2026-08-31",
+    }), encoding="utf-8")
+
+    log = Log.load(discover(tmp_path))
+    assert log.accounts_for(None) == ["XDIA", "XYAO"]
+    assert log.status()["mixed_accounts"] is True
+
+    # Selecting one session isolates its account.
+    assert log.accounts_for("2026-08-31") == ["XYAO"]
+    assert log.status("2026-08-31")["account"] == "XYAO"
+    assert log.status("2026-08-31")["mixed_accounts"] is False
+
+
+def test_sessions_endpoint_maps_each_session_to_its_account(tmp_path):
+    for day, acct in (("2026-08-28", "XDIA"), ("2026-08-31", "XYAO")):
+        (tmp_path / f"decision_log-{day}.jsonl").write_text(json.dumps({
+            **rec(1, "session", {"event": "close", "account": acct}),
+            "session_date": day,
+        }), encoding="utf-8")
+
+    from fastapi.testclient import TestClient
+
+    from src.dashboard.app import create_app
+
+    body = TestClient(create_app(tmp_path)).get("/api/sessions").json()
+    assert body["accounts"] == {"2026-08-28": ["XDIA"], "2026-08-31": ["XYAO"]}
+
+
+def test_an_unrecorded_account_is_absent_not_guessed(log):
+    """Sessions written before the marker existed must not be attributed."""
+    assert log.accounts_for(SESSION) == []
+    assert log.status()["account"] is None
+
+
+def test_only_the_suffix_is_recorded(tmp_path):
+    """The full account number is operator state and stays out of the log."""
+    rows = [rec(1, "session", {"event": "open", "account": "XYAO"})]
+    path = tmp_path / f"decision_log-{SESSION}.jsonl"
+    path.write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
+    assert len(Log.load([path]).accounts_for(SESSION)[0]) == 4

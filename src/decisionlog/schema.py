@@ -89,6 +89,14 @@ class SessionPayload(_Base):
     event: Literal["open", "close", "halt", "resume", "replay_start", "replay_end"]
     equity: float | None = None
     open_positions: int | None = None
+    account: str | None = Field(
+        default=None,
+        description="Last four characters of the account the session ran against, "
+        "read back from the broker. Suffix only -- the full number is operator "
+        "state. Present so a log can PROVE which account produced it: which "
+        "account a key pair addresses is a property of the keys, and a session "
+        "attributed by date alone is an assertion rather than evidence.",
+    )
     config_fingerprint: str | None = Field(
         default=None,
         description="sha256 of the limits/universe values in force, so a replay can prove "
