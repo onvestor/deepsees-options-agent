@@ -22,6 +22,7 @@ session:
 cache:
   contracts_ttl_seconds: 900  # int, contract universe layer (~15 min)
   quotes_ttl_seconds: 8  # int, quotes + greeks layer (5-10s)
+  bars_ttl_seconds: 60  # float, daily-bar refetch during a session
   contracts_max_entries: 64  # int, LRU bound on the universe tier
   quotes_max_entries: 512  # int, LRU bound on the per-symbol tier
 

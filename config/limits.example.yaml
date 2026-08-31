@@ -26,6 +26,9 @@ session:
 cache:
   contracts_ttl_seconds: null           # int, contract universe layer (~15 min)
   quotes_ttl_seconds: null              # int, quotes + greeks layer (5-10s)
+  bars_ttl_seconds: null                # float -- daily-bar refetch during a
+                                        #   live session; must be well under the
+                                        #   entry-scan cadence
   contracts_max_entries: null           # int, LRU bound on the universe tier
   quotes_max_entries: null              # int, LRU bound on the per-symbol tier
 

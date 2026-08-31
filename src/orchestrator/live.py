@@ -114,7 +114,8 @@ class LiveSession:
         self.target_pct = self.limits.get_float("exits.target_pct")
         self.max_hold = self.limits.get_int("exits.max_hold_sessions")
         self.min_to_expiry = self.limits.get_int("exits.min_sessions_to_expiry")
-        self._bars: dict[tuple[str, date], Any] = {}
+        self.bars_ttl = self.limits.get_float("cache.bars_ttl_seconds")
+        self._bars: dict[tuple[str, date], tuple[datetime, Any]] = {}
         # One id per entry attempt and per exit decision. entry_scan runs
         # every few minutes, so the same symbol is scanned many times a
         # session -- grouping a causal chain by symbol alone would merge
@@ -167,16 +168,28 @@ class LiveSession:
     # -- market data --------------------------------------------------------
 
     def bars(self, symbol: str, session: date) -> Any:
-        """Daily bars, cached for the session.
+        """Daily bars, re-fetched on a short TTL.
 
-        Bars are the one thing safe to hold: a daily frame does not change
-        within a session, and re-fetching 120 days per symbol per entry scan
-        would be the dominant cost of the loop. Positions and quotes are not
-        cached anywhere.
+        **This was cached for the whole session and that was the bug.** The
+        docstring used to claim a daily frame does not change within a session.
+        It does: the current day's bar forms continuously while the market is
+        open. Worse, the first fetch happens pre-market during the Agent 2
+        screen, when today's bar does not exist at all -- so every scan for the
+        next six and a half hours was served a frame ending on the *previous*
+        session. Measured 31 Aug 2026: 189 signal evaluations, every one
+        carrying the same `bar_ts` and `bar_count`, producing three distinct
+        results repeated sixty-three times each.
+
+        The TTL is short enough that each entry scan sees current data and long
+        enough that the several calls inside one scan do not refetch two
+        hundred days per symbol. Positions and quotes remain uncached entirely.
         """
         key = (symbol, session)
-        if key in self._bars:
-            return self._bars[key]
+        hit = self._bars.get(key)
+        if hit is not None:
+            fetched_at, frame = hit
+            if (_now() - fetched_at).total_seconds() < self.bars_ttl:
+                return frame
 
         from alpaca.data.requests import StockBarsRequest
         from alpaca.data.timeframe import TimeFrame
@@ -193,8 +206,20 @@ class LiveSession:
         )
         if "symbol" in getattr(frame.index, "names", []):
             frame = frame.xs(symbol, level="symbol")
-        self._bars[key] = frame
+        self._bars[key] = (_now(), frame)
         return frame
+
+    def has_partial_bar(self, frame: Any, session: date) -> bool:
+        """Whether the final bar is today's, and therefore still forming.
+
+        Only ever consulted during an entry scan, which runs inside the entry
+        window -- so a bar dated today is by definition incomplete there.
+        """
+        try:
+            return bool(len(frame)) and frame.index[-1].date() == session
+        except Exception:  # noqa: BLE001 -- an unreadable index is not partial
+            return False
+
 
     def stats(self, symbol: str, session: date) -> tuple[float, float, float] | None:
         """Spot, ATR and realised vol, or None when history is too short."""
@@ -202,7 +227,14 @@ class LiveSession:
         if frame is None or len(frame) < max(self.atr_period, self.rv_window) + 1:
             return None
         spot = float(frame["close"].iloc[-1])
-        atr = float(atr_indicator(frame, self.atr_period).iloc[-1])
+        # Same rule as the engine: a forming bar's range is partial, so it is
+        # excluded from ATR while its close is used as the current price.
+        completed = (
+            frame.iloc[:-1]
+            if self.has_partial_bar(frame, session) and len(frame) > 1
+            else frame
+        )
+        atr = float(atr_indicator(completed, self.atr_period).iloc[-1])
         try:
             rv = realized_volatility(list(frame["close"]), self.rv_window)
         except Exception:  # noqa: BLE001 -- too little history is a skip
@@ -396,7 +428,10 @@ class LiveSession:
             min_atr_multiple=decision.signal_profile.min_atr_multiple,
             allowed_direction=decision.signal_profile.allowed_direction.value,
         )
-        evaluation = signal_engine.evaluate(frame, profile, self.signal_settings)
+        evaluation = signal_engine.evaluate(
+            frame, profile, self.signal_settings,
+            partial_last_bar=self.has_partial_bar(frame, state.session),
+        )
         self._write(
             signal_eval_payload(
                 evaluation, bar_ts=str(frame.index[-1]), bar_count=len(frame),
@@ -754,6 +789,10 @@ class LiveSession:
             "reconcile": self.reconcile_job,
             "a6_review": self.a6_review,
         }
+
+
+def _now() -> datetime:
+    return datetime.now(tz=timezone.utc)
 
 
 def _suffix(account: Any) -> str | None:

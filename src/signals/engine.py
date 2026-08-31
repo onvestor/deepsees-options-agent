@@ -133,11 +133,28 @@ def evaluate(
     bars: pd.DataFrame,
     profile: SignalProfile,
     settings: SignalSettings,
+    partial_last_bar: bool = False,
 ) -> SignalEvaluation:
     """Evaluate ``profile`` against ``bars``. Pure; ``bars`` is not mutated.
 
     Bars must be ascending in time with a DatetimeIndex and the standard OHLCV
     columns. The final row is the bar being evaluated.
+
+    **``partial_last_bar`` says the final bar is still forming**, which is the
+    normal case for a daily frame read during a live session: its close is the
+    current price, but its high, low and volume are only "so far today".
+
+    That distinction matters for exactly one indicator. ``close``, the EMAs and
+    RSI are functions of the close, and a forming close *is* the current price
+    -- using it is the entire point of reading a live frame. ``atr`` is not: a
+    partial bar's true range is whatever the day has managed by now, so
+    including it drags the average down and shrinks the denominator of the
+    displacement gate. A quiet morning would then look like a large move in ATR
+    units, which is precisely backwards.
+
+    So ATR is computed over completed bars only. The engine cannot detect this
+    from the data -- a forming bar looks like any other -- so the caller must
+    say, and the default is False.
     """
     missing = [column for column in REQUIRED_BAR_COLUMNS if column not in bars.columns]
     if missing:
@@ -154,9 +171,14 @@ def evaluate(
 
     fast = ema(bars["close"], profile.ema_fast)
     slow = ema(bars["close"], settings.ema_slow)
-    average_range = atr(bars, settings.atr_period)
     strength = rsi(bars["close"], settings.rsi_period)
     volume_weighted = vwap(bars, session_anchored=settings.vwap_session_anchored)
+
+    # ATR from completed bars only. See the note in the docstring: a forming
+    # bar's range is partial, and a shrunken ATR inflates every displacement
+    # measured against it.
+    completed = bars.iloc[:-1] if partial_last_bar and len(bars) > 1 else bars
+    average_range = atr(completed, settings.atr_period)
 
     latest = {
         "close": float(bars["close"].iloc[-1]),

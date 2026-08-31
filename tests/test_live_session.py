@@ -355,3 +355,80 @@ def test_every_scheduled_job_has_a_handler(session, config):
 def test_handlers_are_callable_with_a_state(session):
     for name, handler in session.handlers().items():
         assert callable(handler), name
+
+
+# --- the frame must be current -------------------------------------------
+
+
+def _frame(days=40, last_day=None, partial_range=True):
+    """A daily frame whose final bar optionally has a narrow (forming) range."""
+    import numpy as np
+    import pandas as pd
+
+    idx = pd.bdate_range(end=last_day or "2026-08-31", periods=days)
+    close = np.linspace(100.0, 120.0, days)
+    high, low = close * 1.02, close * 0.98
+    if partial_range:
+        high[-1], low[-1] = close[-1] * 1.001, close[-1] * 0.999
+    return pd.DataFrame(
+        {"open": close, "high": high, "low": low, "close": close,
+         "volume": np.full(days, 1_000_000)},
+        index=idx,
+    )
+
+
+def test_bars_are_refetched_once_the_ttl_expires(session, monkeypatch):
+    """Cached for the whole session was the 31 Aug bug: the first fetch happens
+    pre-market, when today's bar does not exist, and every later scan was served
+    that frame."""
+    calls = {"n": 0}
+
+    class FakeStocks:
+        def get_stock_bars(self, _request):
+            calls["n"] += 1
+            return type("R", (), {"df": _frame()})()
+
+    session.clients.stocks = FakeStocks()
+
+    session.bars_ttl = 60.0
+    session.bars("PLTR", SESSION)
+    session.bars("PLTR", SESSION)
+    assert calls["n"] == 1, "within the TTL a refetch is wasteful"
+
+    session.bars_ttl = 0.0
+    session.bars("PLTR", SESSION)
+    assert calls["n"] == 2, "past the TTL the frame must be re-read"
+
+
+def test_a_bar_dated_today_is_recognised_as_forming(session):
+    frame = _frame(last_day="2026-08-31")
+    assert session.has_partial_bar(frame, date(2026, 8, 31)) is True
+    assert session.has_partial_bar(frame, date(2026, 9, 1)) is False
+
+
+def test_atr_excludes_the_forming_bar(session, monkeypatch):
+    """A partial bar's range is only what the day has managed so far. Including
+    it shrinks ATR and inflates every displacement measured against it."""
+    from src.signals.indicators import atr as atr_ind
+
+    frame = _frame(last_day="2026-08-31", partial_range=True)
+    monkeypatch.setattr(session, "bars", lambda s, d: frame)
+
+    including = float(atr_ind(frame, session.atr_period).iloc[-1])
+    excluding = float(atr_ind(frame.iloc[:-1], session.atr_period).iloc[-1])
+    assert including < excluding, "the fixture's final bar must be narrow"
+
+    _spot, atr, _rv = session.stats("PLTR", date(2026, 8, 31))
+    assert atr == pytest.approx(excluding)
+
+
+def test_a_completed_final_bar_is_not_excluded(session, monkeypatch):
+    """Only today's bar is forming. Dropping a completed one would throw away
+    a bar of history for nothing."""
+    from src.signals.indicators import atr as atr_ind
+
+    frame = _frame(last_day="2026-08-28")
+    monkeypatch.setattr(session, "bars", lambda s, d: frame)
+
+    _spot, atr, _rv = session.stats("PLTR", date(2026, 8, 31))
+    assert atr == pytest.approx(float(atr_ind(frame, session.atr_period).iloc[-1]))
