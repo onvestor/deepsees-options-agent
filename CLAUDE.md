@@ -107,6 +107,52 @@ zones share DST dates so the three-hour offset is stable, and the task's local t
 thing to check if a firing ever looks an hour out. The wrapper gates the session on the
 account preflight and **refuses to start** if the keys address the wrong account.
 
+### The 31 Aug session, and the stale-frame bug it exposed
+
+Ran clean end to end on the competition account — scheduled start, account gate passed, closed
+16:09, exit 0, 4,911 records, zero agent failures. **And placed nothing:** 189 signal
+evaluations, 0 triggered.
+
+**The cause was a bar cache, not a threshold.** `live.py` cached the daily frame under
+`(symbol, session)` for the whole day, and the first fetch happens pre-market during the Agent 2
+screen — when today's bar does not exist yet. Every scan for the next six and a half hours was
+served a frame ending on the *previous* session: all 189 evaluations carried the same `bar_ts`
+and `bar_count`, producing three distinct results repeated sixty-three times each. The docstring
+claimed "a daily frame does not change within a session". It does; the current day's bar forms
+continuously, and Alpaca returns it.
+
+Fixed 31 Aug. `cache.bars_ttl_seconds` (60) replaces the session-long hold, so each entry scan
+re-reads and picks up the forming bar. **ATR is computed over completed bars only** — a partial
+bar's true range is whatever the day has managed so far, and including it shrinks the
+denominator of the displacement gate, so a quiet morning would read as a large move in ATR
+units. `evaluate(..., partial_last_bar=True)` carries that; the engine cannot detect a forming
+bar from the data, so the caller must say.
+
+Measured against the real frames, this is what the stale data cost:
+
+| symbol | stale (Fri bar) | live (Mon bar) | outcome |
+| --- | --- | --- | --- |
+| NVDA | displacement 0.268 | 0.640 | still blocked, 2.4x closer |
+| TSLA | displacement 0.271 | **1.593** | **all gates pass, triggers** |
+| PLTR | displacement 2.364 | 2.161 | triggers |
+
+TSLA moved 348.75 → 367.93 (+5.5%) that session and the frozen frame could not see it.
+
+**`min_atr_multiple` was deliberately NOT changed.** Measured across the universe over 60 daily
+bars: pooled median displacement 0.88, and 0.70 admits **59%** of all bars. The gate was never
+the constraint — one unlucky stale day made it look like one. Per-symbol dispersion is real and
+unresolved: at 0.7, admission runs 45% on IWM to 75% on PLTR, a 30-point spread that gates index
+ETFs harder than high-beta single names. That is a post-hackathon question, not something to
+move on a single session's evidence.
+
+**One writer per log.** A second process started manually at 09:57 re-issued sequence numbers
+766–772 while the scheduled session was still writing, because `_seq` is a per-process counter
+seeded from the line count. Nothing was lost — `record_id` stayed unique and no total
+double-counted — but the log stopped being a single ordered account of one session. A lockfile
+now refuses a second writer and names the pid holding it; stale locks are never cleared
+automatically, because "probably dead" is a guess whose cost is two writers again. The dashboard
+sorts by `(session_date, ts_utc, seq)` so a duplicate can never reorder the timeline.
+
 ### The first live session — 28 Aug, dev account
 
 1,586 decision-log records, 11:51–16:04 ET. Read it with `python -m cli.session_report`.
@@ -743,6 +789,17 @@ This cuts the call budget by roughly an order of magnitude — ~250–400 per se
 
 `src/signals/` is unaffected: the indicators are timeframe-agnostic pure functions. Only the bar
 frame passed in and the cadence of evaluation change.
+
+**VWAP is disabled on daily frames — measured 31 Aug, and a defect rather than a tuning
+question.** `vwap(session_anchored=True)` groups by `index.date` and accumulates within each
+group. On a daily frame every bar is its own date, so each group holds one row and the VWAP
+collapses to that bar's own `(H+L+C)/3` — verified identical to machine precision on NVDA, PLTR
+and TSLA. The gate was therefore asking "did it close above the midpoint of its own last
+candle", a one-bar shape test near a coin flip, and it blocked 126 of 189 evaluations. No
+threshold repairs a degenerate indicator, so the gate is forced true whenever the frame is daily
+— detected from bar spacing, not configured — and `agents.a1.allow_vwap_alignment` is false so
+Agent 1 cannot enable it. It stays live for intraday frames, where a session-anchored VWAP means
+what its name says.
 
 ---
 
