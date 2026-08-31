@@ -137,7 +137,14 @@ class Log:
                     # that 500s because it caught the writer mid-flush is
                     # worse than one record late.
                     continue
-        records.sort(key=lambda r: (r.raw.get("session_date", ""), r.seq))
+        # Sorted by TIME, with seq only as a tiebreak. seq is per-process: a
+        # second process opening a live log counts the existing lines and
+        # re-issues numbers already used, so sorting on it first interleaves
+        # two processes and runs timestamps backwards. Observed 31 Aug -- six
+        # reversals across fourteen rows. Time is monotonic regardless of how
+        # many writers there were.
+        records.sort(key=lambda r: (r.raw.get("session_date", ""),
+                                    r.raw.get("ts_utc", ""), r.seq))
         return cls(records=records, sources=sources)
 
     # -- selection ----------------------------------------------------------

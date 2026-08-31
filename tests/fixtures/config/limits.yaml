@@ -154,6 +154,7 @@ agents:
   a1:
     run_at_et: "09:15"  # "HH:MM" ET, pre-market
     confidence_floor: 0.5  # float, 0.0-1.0; below -> direction none
+    allow_vwap_alignment: false  # bool
     profile_locked_for_session: true  # bool -- whole-session lock
     allowed_ema_fast: [8, 9, 10, 12]                # list[int] -- clamp target
     allowed_confirmation_bars: [1, 2, 3]       # list[int] -- clamp target

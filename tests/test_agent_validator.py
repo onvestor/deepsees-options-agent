@@ -33,7 +33,9 @@ def limits():
 
 
 def a1_payload(**kw):
-    profile = dict(ema_fast=9, confirmation_bars=2, require_vwap_alignment=True,
+    # False so the vwap force does not fire: these tests are about other
+    # rules, and an unrelated override would mask the one under test.
+    profile = dict(ema_fast=9, confirmation_bars=2, require_vwap_alignment=False,
                    min_atr_multiple=0.6, allowed_direction="long_calls")
     profile.update(kw.pop("profile", {}))
     base = dict(symbol="NVDA", regime="trending_up", confidence=0.9,

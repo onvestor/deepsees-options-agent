@@ -280,3 +280,4 @@ CLAUDE.local.md
 *.local.md
 scratch/
 notes/
+logs/*.lock

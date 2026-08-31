@@ -169,6 +169,8 @@ agents:
     run_at_et: null                     # "HH:MM" ET, pre-market -- once per
                                         #   session, NOT a polling interval
     confidence_floor: null              # float, 0.0-1.0; below -> direction none
+    allow_vwap_alignment: null          # bool -- let Agent 1 enable the vwap
+                                        #   gate; degenerate on daily frames
     profile_locked_for_session: null    # bool -- lock the profile for the
                                         #   whole session, NOT a minute count
     allowed_ema_fast: []                # list[int] -- clamp target

@@ -28,6 +28,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import re
 import threading
 from collections.abc import Iterator
@@ -52,7 +53,8 @@ try:  # pragma: no cover - trivial import shim
 except Exception:  # pragma: no cover
     ET = timezone.utc  # type: ignore[assignment]
 
-__all__ = ["DecisionLog", "Redactor", "prompt_hash", "read_records", "reconstruct_session"]
+__all__ = ["DecisionLog", "DecisionLogLocked", "Redactor", "prompt_hash",
+           "read_records", "reconstruct_session"]
 
 REDACTION = "<redacted>"
 
@@ -158,6 +160,10 @@ class Redactor:
         return value
 
 
+class DecisionLogLocked(RuntimeError):
+    """Another live process owns this log. Naming the pid is the point."""
+
+
 class DecisionLog:
     """Append-only JSONL writer. One record per line, one line per decision.
 
@@ -170,19 +176,31 @@ class DecisionLog:
         path: Path,
         redactor: Redactor | None = None,
         fsync: bool = False,
+        allow_concurrent: bool = False,
+        steal_stale_lock: bool = False,
     ) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._redactor = redactor or Redactor(enabled=False)
         self._fsync = fsync
         self._lock = threading.Lock()
+        self._lockfile = Path(str(self.path) + ".lock")
+        self._owns_lock = False
+        if not allow_concurrent:
+            self._claim(force=steal_stale_lock)
         # Continue the sequence rather than restarting it, so seq is monotonic
         # across a restart mid-session.
         self._seq = self._count_existing_lines()
         self._handle = open(self.path, "a", encoding="utf-8", newline="\n")
 
     @classmethod
-    def from_config(cls, config: Config, session_date: date | None = None) -> "DecisionLog":
+    def from_config(
+        cls,
+        config: Config,
+        session_date: date | None = None,
+        allow_concurrent: bool = False,
+        steal_stale_lock: bool = False,
+    ) -> "DecisionLog":
         filename = config.limits.get_str("decision_log.filename")
         if config.limits.get_bool("decision_log.rotate_daily"):
             day = (session_date or datetime.now(tz=ET).date()).isoformat()
@@ -192,7 +210,66 @@ class DecisionLog:
             path=config.ensure_log_dir() / filename,
             redactor=Redactor.from_config(config),
             fsync=config.limits.get_bool("decision_log.fsync_every_record"),
+            allow_concurrent=allow_concurrent,
+            steal_stale_lock=steal_stale_lock,
         )
+
+    def _claim(self, force: bool = False) -> None:
+        """Take ownership of this log, or refuse to open it.
+
+        **A second process must not write to a live log.** ``_seq`` is a
+        per-process counter seeded from the line count, so two writers on one
+        file independently issue the same sequence numbers. Observed 31 Aug
+        2026: a manually started session re-issued 766-772 while the scheduled
+        one was still running. Nothing was lost -- ``record_id`` stayed unique
+        and no total double-counted -- but the log stopped being a single
+        ordered account of one session, which is the only thing it is for.
+
+        The lock records pid and start time so a file left by a killed process
+        is *diagnosable* rather than merely obstructive: it names the pid to
+        check. Stale locks are never cleared automatically, because "probably
+        dead" is a guess and the cost of guessing wrong is two writers again.
+        ``steal_stale_lock`` makes overriding it a deliberate act.
+        """
+        if self._lockfile.exists():
+            try:
+                held = json.loads(self._lockfile.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001 -- an unreadable lock still locks
+                held = {}
+            # Any live lock blocks, including one held by this same pid. Two
+            # DecisionLog objects in one process are the identical bug: each
+            # seeds its own _seq from the line count and they issue the same
+            # numbers. Whether the second writer is another process or another
+            # object is not a distinction the log can survive.
+            if not force:
+                raise DecisionLogLocked(
+                    f"{self.path.name} is held by pid {held.get('pid', '?')} since "
+                    f"{held.get('started_at', 'an unknown time')}. A second writer "
+                    "would re-issue sequence numbers already used. If that process "
+                    f"is dead, delete {self._lockfile} or pass steal_stale_lock=True."
+                )
+
+        self._lockfile.write_text(
+            json.dumps({
+                "pid": os.getpid(),
+                "started_at": datetime.now(tz=timezone.utc).isoformat(),
+                "log": self.path.name,
+            }),
+            encoding="utf-8",
+        )
+        self._owns_lock = True
+
+    def release(self) -> None:
+        """Drop the lock. Idempotent, and never removes another pid's lock."""
+        if not self._owns_lock:
+            return
+        try:
+            held = json.loads(self._lockfile.read_text(encoding="utf-8"))
+            if held.get("pid") == os.getpid():
+                self._lockfile.unlink()
+        except Exception:  # noqa: BLE001 -- releasing must never raise
+            pass
+        self._owns_lock = False
 
     def _count_existing_lines(self) -> int:
         if not self.path.exists():
@@ -256,6 +333,7 @@ class DecisionLog:
         with self._lock:
             if not self._handle.closed:
                 self._handle.close()
+        self.release()
 
     @property
     def records_written(self) -> int:

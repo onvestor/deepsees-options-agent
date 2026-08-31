@@ -533,3 +533,91 @@ def test_from_config_rotates_daily(tmp_path, monkeypatch):
     instance.close()
     assert instance.path.name == "decision_log-2026-08-24.jsonl"
     assert instance.path.exists()
+
+
+# --- one writer per log ----------------------------------------------------
+
+
+def test_a_second_process_cannot_open_a_live_log(tmp_path):
+    """Observed 31 Aug 2026: a manually started session re-issued seq 766-772
+    while the scheduled one was still writing. Nothing was lost, but the log
+    stopped being a single ordered account of one session."""
+    from src.decisionlog.decision_log import DecisionLog, DecisionLogLocked
+
+    path = tmp_path / "decision_log-x.jsonl"
+    first = DecisionLog(path)
+    try:
+        with pytest.raises(DecisionLogLocked, match="held by pid"):
+            DecisionLog(path)
+    finally:
+        first.close()
+
+
+def test_the_lock_names_the_pid_to_check(tmp_path):
+    """A stale lock must be diagnosable, not merely obstructive."""
+    import json
+    import os
+
+    from src.decisionlog.decision_log import DecisionLog, DecisionLogLocked
+
+    path = tmp_path / "decision_log-y.jsonl"
+    lock = tmp_path / "decision_log-y.jsonl.lock"
+    lock.write_text(json.dumps({"pid": 999999, "started_at": "2026-08-31T13:45:00Z"}),
+                    encoding="utf-8")
+    with pytest.raises(DecisionLogLocked) as exc:
+        DecisionLog(path)
+    assert "999999" in str(exc.value)
+    assert "steal_stale_lock" in str(exc.value)
+
+
+def test_a_stale_lock_is_never_cleared_automatically(tmp_path):
+    """'Probably dead' is a guess, and the cost of guessing wrong is two
+    writers again. Overriding it has to be deliberate."""
+    import json
+
+    from src.decisionlog.decision_log import DecisionLog
+
+    path = tmp_path / "decision_log-z.jsonl"
+    (tmp_path / "decision_log-z.jsonl.lock").write_text(
+        json.dumps({"pid": 999999}), encoding="utf-8")
+
+    log = DecisionLog(path, steal_stale_lock=True)
+    try:
+        assert log._owns_lock
+    finally:
+        log.close()
+
+
+def test_closing_releases_the_lock_so_the_next_session_can_open(tmp_path):
+    from src.decisionlog.decision_log import DecisionLog
+
+    path = tmp_path / "decision_log-w.jsonl"
+    first = DecisionLog(path)
+    first.close()
+    second = DecisionLog(path)          # must not raise
+    second.close()
+
+
+def test_release_never_removes_another_processes_lock(tmp_path):
+    import json
+
+    from src.decisionlog.decision_log import DecisionLog
+
+    path = tmp_path / "decision_log-v.jsonl"
+    log = DecisionLog(path)
+    lock = tmp_path / "decision_log-v.jsonl.lock"
+    lock.write_text(json.dumps({"pid": 424242}), encoding="utf-8")
+    log.release()
+    assert lock.exists(), "another pid's lock must survive our release"
+    lock.unlink()
+
+
+def test_allow_concurrent_is_available_for_readers(tmp_path):
+    """Replay and tests open logs without owning them."""
+    from src.decisionlog.decision_log import DecisionLog
+
+    path = tmp_path / "decision_log-u.jsonl"
+    a = DecisionLog(path)
+    b = DecisionLog(path, allow_concurrent=True)   # must not raise
+    a.close()
+    b.close()

@@ -114,6 +114,21 @@ def _no_signal(reason: str, **extra: Any) -> SignalEvaluation:
     )
 
 
+def _is_daily(bars: pd.DataFrame) -> bool:
+    """True when consecutive bars are a day or more apart.
+
+    Measured from the frame rather than configured, so a caller cannot assert
+    a timeframe the data does not have. Two bars are enough; a single-bar frame
+    cannot be evaluated anyway.
+    """
+    if len(bars.index) < 2:
+        return True
+    deltas = bars.index.to_series().diff().dropna()
+    if deltas.empty:
+        return True
+    return deltas.median() >= pd.Timedelta(hours=20)
+
+
 def evaluate(
     bars: pd.DataFrame,
     profile: SignalProfile,
@@ -180,11 +195,27 @@ def evaluate(
     gates = {
         "confirmation": True,
         "atr_displacement": displacement >= profile.min_atr_multiple,
+        # DISABLED ON DAILY BARS -- measured 31 Aug 2026, not retuned.
+        #
+        # `vwap(session_anchored=True)` groups by `index.date` and accumulates
+        # within each group. On a DAILY frame every bar is its own date, so
+        # each group holds one row and the VWAP collapses to that same bar's
+        # (H+L+C)/3 -- verified identical to machine precision on NVDA, PLTR
+        # and TSLA. The gate then asks "did it close above the midpoint of its
+        # own last candle", a one-bar shape test that is close to a coin flip
+        # and says nothing about a 1-5 session thesis. It silently blocked 126
+        # of 189 evaluations in the 31 Aug session.
+        #
+        # Not retuned, because no threshold fixes a degenerate indicator. The
+        # gate is forced True whenever the frame is daily; it stays live for
+        # any intraday frame, where a session-anchored VWAP means what its name
+        # says.
         "vwap_alignment": (
-            (latest["close"] > latest["vwap"]) if is_long else (latest["close"] < latest["vwap"])
-        )
-        if profile.require_vwap_alignment
-        else True,
+            True
+            if (not profile.require_vwap_alignment or _is_daily(bars))
+            else ((latest["close"] > latest["vwap"]) if is_long
+                  else (latest["close"] < latest["vwap"]))
+        ),
         "rsi_guard": (
             latest["rsi"] <= settings.rsi_long_max
             if is_long

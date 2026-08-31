@@ -218,6 +218,20 @@ def _rules_a1(d: RegimeDecision, limits: Any, ctx: dict[str, Any], c: _Collector
         c.clamp("signal_profile.confirmation_bars", p.confirmation_bars, picked,
                 "agents.a1.allowed_confirmation_bars", f"allowed {allowed_bars}")
         updates["confirmation_bars"] = picked
+    # require_vwap_alignment is FORCED OFF, 31 Aug 2026. The indicator is
+    # degenerate on the daily frames this system evaluates -- a session-anchored
+    # VWAP over daily bars is that bar's own typical price -- so the option is
+    # removed from Agent 1's effective choices rather than left as a switch the
+    # model can flip to no purpose. Kept in the schema because the field is a
+    # published contract and the gate becomes meaningful again the day an
+    # intraday frame is evaluated. A force, not a clamp: the model's answer was
+    # legal and policy overrode it.
+    if p.require_vwap_alignment and not limits.get_bool("agents.a1.allow_vwap_alignment"):
+        c.force("signal_profile.require_vwap_alignment", True, False,
+                "agents.a1.allow_vwap_alignment",
+                "vwap is degenerate on a daily frame; gate disabled")
+        updates["require_vwap_alignment"] = False
+
     if not floor <= p.min_atr_multiple <= ceiling:
         picked = min(max(p.min_atr_multiple, floor), ceiling)
         c.clamp("signal_profile.min_atr_multiple", p.min_atr_multiple, picked,

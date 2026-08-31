@@ -53,7 +53,7 @@ def runner(config):
 GOOD = {
     "symbol": "NVDA", "regime": "trending_up", "confidence": 0.9,
     "signal_profile": {"ema_fast": 9, "confirmation_bars": 2,
-                       "require_vwap_alignment": True, "min_atr_multiple": 0.6,
+                       "require_vwap_alignment": False, "min_atr_multiple": 0.6,
                        "allowed_direction": "long_calls"},
     "rationale": "trend intact",
 }

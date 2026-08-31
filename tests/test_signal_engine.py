@@ -274,3 +274,88 @@ def test_evaluation_is_frozen():
     assert isinstance(result, SignalEvaluation)
     with pytest.raises(Exception):
         result.direction = "long_puts"  # type: ignore[misc]
+
+
+# --- vwap is degenerate on daily bars, and disabled there -------------------
+
+
+def _daily(n=60, start=100.0):
+    import numpy as np
+    import pandas as pd
+
+    idx = pd.date_range("2026-05-01", periods=n, freq="B")
+    close = np.linspace(start, start * 1.15, n)
+    return pd.DataFrame(
+        {"open": close * 0.995, "high": close * 1.02, "low": close * 0.98,
+         "close": close, "volume": np.full(n, 1_000_000)},
+        index=idx,
+    )
+
+
+def test_session_anchored_vwap_collapses_to_one_bar_on_a_daily_frame():
+    """The finding behind disabling the gate: with one bar per date, the
+    accumulation group has a single row and VWAP becomes that bar's own
+    (H+L+C)/3 -- carrying no information beyond the candle's shape."""
+    from src.signals.indicators import vwap
+
+    bars = _daily()
+    typical = (bars["high"] + bars["low"] + bars["close"]) / 3.0
+    computed = vwap(bars, session_anchored=True)
+    assert (computed - typical).abs().max() < 1e-9
+
+
+def test_vwap_gate_is_forced_true_on_a_daily_frame():
+    """Not retuned -- no threshold repairs a degenerate indicator."""
+    from src.signals.engine import SignalProfile, SignalSettings, evaluate
+
+    bars = _daily()
+    # Close below the bar's own typical price: the gate would block if live.
+    bars.loc[bars.index[-1], "close"] = bars["low"].iloc[-1]
+
+    settings = SignalSettings(ema_slow=21, atr_period=14, rsi_period=14,
+                              rsi_long_max=95.0, rsi_short_min=5.0, min_bars=30,
+                              vwap_session_anchored=True)
+    profile = SignalProfile(ema_fast=9, confirmation_bars=1,
+                            require_vwap_alignment=True, min_atr_multiple=0.0,
+                            allowed_direction="both")
+    result = evaluate(bars, profile, settings)
+    assert result.gates["vwap_alignment"] is True
+
+
+def test_the_gate_still_applies_on_an_intraday_frame():
+    """Disabled for daily only. A session-anchored VWAP over hourly bars means
+    what its name says, and the gate must come back when one is evaluated."""
+    import numpy as np
+    import pandas as pd
+
+    from src.signals.engine import SignalProfile, SignalSettings, evaluate
+    from src.signals.engine import _is_daily
+
+    idx = pd.date_range("2026-08-31 09:30", periods=60, freq="h")
+    close = np.linspace(100.0, 90.0, 60)          # falling: closes under vwap
+    bars = pd.DataFrame(
+        {"open": close, "high": close * 1.01, "low": close * 0.99,
+         "close": close, "volume": np.full(60, 1_000)},
+        index=idx,
+    )
+    assert not _is_daily(bars)
+
+    settings = SignalSettings(ema_slow=21, atr_period=14, rsi_period=14,
+                              rsi_long_max=95.0, rsi_short_min=5.0, min_bars=30,
+                              vwap_session_anchored=True)
+    profile = SignalProfile(ema_fast=9, confirmation_bars=1,
+                            require_vwap_alignment=True, min_atr_multiple=0.0,
+                            allowed_direction="both")
+    result = evaluate(bars, profile, settings)
+    assert "vwap_alignment" in result.gates
+
+
+def test_is_daily_distinguishes_the_two_frames():
+    import pandas as pd
+
+    from src.signals.engine import _is_daily
+
+    assert _is_daily(_daily())
+    hourly = _daily()
+    hourly.index = pd.date_range("2026-08-31 09:30", periods=len(hourly), freq="h")
+    assert not _is_daily(hourly)
