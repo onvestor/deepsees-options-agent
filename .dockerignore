@@ -1,0 +1,26 @@
+# Everything is excluded, then the image adds back only what the dashboard
+# needs. A denylist would ship whatever a future directory happens to be
+# called; an allowlist cannot.
+*
+
+!src/dashboard/
+!src/__init__.py
+!src/dashboard/static/
+!deploy/logs/
+!deploy/requirements-dashboard.txt
+
+# Belt and braces. These are already excluded by the `*` above, and they are
+# named again because the cost of one of them reaching a public image is
+# unrecoverable and a future edit to the allowlist must not be able to admit
+# them silently.
+config/
+prompts/
+.env
+.env.*
+cache/
+logs/
+*.lock
+.git/
+.claude/
+tests/
+replay/

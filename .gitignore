@@ -281,3 +281,5 @@ CLAUDE.local.md
 scratch/
 notes/
 logs/*.lock
+deploy/logs/
+deploy/_stage/

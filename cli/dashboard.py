@@ -33,19 +33,102 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--log-dir", type=Path, default=None)
     p.add_argument("--check", action="store_true",
                    help="render every view once, report, and exit")
+    p.add_argument("--url", default=None,
+                   help="with --check: verify a DEPLOYED dashboard over HTTP "
+                        "instead of the local app")
     p.add_argument("--reload", action="store_true")
     return p.parse_args(argv)
 
 
-def check(log_dir: Path | None) -> int:
-    """Exercise every view against the real log. No server, no network."""
-    from fastapi.testclient import TestClient
+class _RemoteClient:
+    """Minimal client over a deployed dashboard, shaped like TestClient.
 
-    from src.dashboard.app import create_app, resolve_log_dir
+    The same assertions run against a URL as against the local app, so a
+    deployment is verified by the checks that gate development rather than by
+    a separate and weaker set. Read-only is the one that matters most remotely:
+    a public URL is where an accidental control would actually be reachable.
+    """
 
-    directory = resolve_log_dir(log_dir)
-    print(f"log dir: {directory}")
-    client = TestClient(create_app(log_dir))
+    def __init__(self, base: str) -> None:
+        self.base = base.rstrip("/")
+
+    @staticmethod
+    def _ssl_context():
+        """A context with a working CA bundle. Verification stays ON.
+
+        This machine's Python has no default CA file
+        (``ssl.get_default_verify_paths().cafile`` is None), so urllib rejects
+        a perfectly valid certificate as expired. The fix is to give it a trust
+        store, not to pass ``verify=False`` -- a check that skips certificate
+        verification is not a check of a public HTTPS endpoint.
+        """
+        import ssl
+
+        try:
+            import truststore
+
+            return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        except ImportError:
+            pass
+        try:
+            import certifi
+
+            return ssl.create_default_context(cafile=certifi.where())
+        except ImportError:
+            return ssl.create_default_context()
+
+    def _call(self, method: str, route: str):
+        import urllib.error
+        import urllib.request
+
+        request = urllib.request.Request(self.base + route, method=method.upper())
+        try:
+            with urllib.request.urlopen(
+                request, timeout=30, context=self._ssl_context()
+            ) as response:
+                body = response.read()
+                return type("R", (), {
+                    "status_code": response.status, "content": body,
+                    "text": body.decode("utf-8", "replace"),
+                    "json": lambda self=None, b=body: __import__("json").loads(b),
+                })()
+        except urllib.error.HTTPError as exc:
+            body = exc.read()
+            return type("R", (), {
+                "status_code": exc.code, "content": body,
+                "text": body.decode("utf-8", "replace"),
+                "json": lambda self=None, b=body: __import__("json").loads(b or b"{}"),
+            })()
+
+    def get(self, route):
+        return self._call("GET", route)
+
+    def post(self, route):
+        return self._call("POST", route)
+
+    def put(self, route):
+        return self._call("PUT", route)
+
+    def patch(self, route):
+        return self._call("PATCH", route)
+
+    def delete(self, route):
+        return self._call("DELETE", route)
+
+
+def check(log_dir: Path | None, url: str | None = None) -> int:
+    """Exercise every view. Locally in-process, or over HTTP against a deploy."""
+    if url:
+        print(f"checking deployed dashboard: {url}")
+        client = _RemoteClient(url)
+    else:
+        from fastapi.testclient import TestClient
+
+        from src.dashboard.app import create_app, resolve_log_dir
+
+        directory = resolve_log_dir(log_dir)
+        print(f"log dir: {directory}")
+        client = TestClient(create_app(log_dir))
 
     failures = []
     routes = ["/", "/healthz", "/api/sessions", "/api/status",
@@ -83,6 +166,17 @@ def check(log_dir: Path | None) -> int:
     else:
         print("  [OK  ] read-only          POST/PUT/PATCH/DELETE all rejected")
 
+    # What a public URL must never serve. Checked against the payloads the
+    # dashboard actually returns, not against the files that built it.
+    body = client.get("/api/timeline").text + client.get("/api/traces").text
+    leaks = [m for m in ("thresholds", "You are the", "sk-ant-", "ALPACA_", "PKTEST")
+             if m in body]
+    if leaks:
+        print(f"  [FAIL] no IP in payloads  found: {leaks}")
+        failures.append("payload-leak")
+    else:
+        print("  [OK  ] no IP in payloads  no thresholds, prompts or credentials")
+
     print()
     print(f"{'CHECK FAILED: ' + ', '.join(failures) if failures else 'CHECK OK'}")
     return 1 if failures else 0
@@ -93,7 +187,7 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
     if args.check:
-        return check(args.log_dir)
+        return check(args.log_dir, args.url)
 
     try:
         import uvicorn

@@ -1,0 +1,6 @@
+# The dashboard reads JSONL and serves it. It needs nothing from the trading
+# stack -- no alpaca-py, no anthropic, no pandas, no pydantic models beyond
+# what FastAPI pulls in. Keeping this list minimal is what makes it provable
+# that the image cannot reach a broker: the SDK is not installed.
+fastapi>=0.115
+uvicorn[standard]>=0.32
