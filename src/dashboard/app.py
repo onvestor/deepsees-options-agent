@@ -122,6 +122,30 @@ def create_app(log_dir: Path | None = None) -> FastAPI:
             raise HTTPException(404, f"no trace {trace_id!r}")
         return found
 
+    @app.get("/api/portfolio")
+    def portfolio(days: int | None = Query(None)) -> dict[str, Any]:
+        """Cross-session by construction -- never filtered by the selector.
+
+        Reads every bundled session regardless of which one is selected. A
+        position opened on one session and closed on another belongs to both,
+        and an equity curve that reset each morning would not be a curve.
+
+        ``days`` trims the *view* to the most recent N sessions; the ledger and
+        the totals still describe everything loaded, so the headline cannot
+        drift as someone changes the range switcher.
+        """
+        data = read(None)
+        curve = data.equity_curve()
+        if days:
+            keep = set(data.sessions[-days:])
+            curve = [p for p in curve if p["session"] in keep]
+        return {
+            "summary": data.portfolio(),
+            "equity": curve,
+            "positions": data.position_ledger(),
+            "range_days": days,
+        }
+
     @app.get("/api/guardrails")
     def guardrails(session: str | None = Query(None)) -> dict[str, Any]:
         return read(session).guardrails(session)

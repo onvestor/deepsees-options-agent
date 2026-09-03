@@ -433,3 +433,129 @@ def test_only_the_suffix_is_recorded(tmp_path):
     path = tmp_path / f"decision_log-{SESSION}.jsonl"
     path.write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
     assert len(Log.load([path]).accounts_for(SESSION)[0]) == 4
+
+
+# --- cross-session portfolio ----------------------------------------------
+
+
+def _two_sessions(tmp_path):
+    """PLTR opened on day one and closed on day two; NVDA opened and still open."""
+    day1 = [
+        rec(1, "session", {"event": "open", "equity": 100000.0, "account": "XYAO"}),
+        rec(2, "order", {"intent": "buy_to_open", "legs": ["PLTR261016C00170000"],
+                         "qty": 1, "filled_qty": 1.0, "filled_avg_price": 19.9},
+            symbol="PLTR", action="entry"),
+        rec(3, "session", {"event": "close", "equity": 99760.0, "account": "XYAO"}),
+        rec(4, "killswitch", {"switch": "daily_loss_halt_abs", "threshold": 3000.0,
+                              "observed": 0.0, "fired": False}),
+    ]
+    day2 = [
+        rec(1, "session", {"event": "open", "equity": 99425.0, "account": "XYAO"}),
+        rec(2, "order", {"intent": "buy_to_open", "legs": ["NVDA261016C00220000"],
+                         "qty": 1, "filled_qty": 1.0, "filled_avg_price": 12.75},
+            symbol="NVDA", action="entry"),
+        rec(3, "order", {"intent": "sell_to_close", "legs": ["PLTR261016C00170000"],
+                         "qty": 1, "filled_qty": 1.0, "filled_avg_price": 12.7},
+            symbol="PLTR", action="exit"),
+        rec(4, "session", {"event": "close", "equity": 99320.0, "account": "XYAO"}),
+    ]
+    for day, rows in (("2026-09-01", day1), ("2026-09-02", day2)):
+        for r in rows:
+            r["session_date"] = day
+            r["ts_utc"] = f"{day}T1{r['seq']}:00:00Z"
+            r["ts_et"] = f"{day}T0{r['seq']}:00:00-04:00"
+        (tmp_path / f"decision_log-{day}.jsonl").write_text(
+            "\n".join(json.dumps(r) for r in rows), encoding="utf-8")
+    return Log.load(discover(tmp_path))
+
+
+def test_the_equity_curve_spans_sessions(tmp_path):
+    curve = _two_sessions(tmp_path).equity_curve()
+    assert [p["session"] for p in curve] == [
+        "2026-09-01", "2026-09-01", "2026-09-02", "2026-09-02"]
+    assert [p["equity"] for p in curve] == [100000.0, 99760.0, 99425.0, 99320.0]
+
+
+def test_the_curve_comes_from_session_records_not_kill_switches(tmp_path):
+    """A kill switch's `observed` for the daily-loss switches is
+    max(0, -pnl) -- floored at zero, so it is 0.0000 for a whole session that
+    finished flat or up. Equity cannot be reconstructed from it in exactly the
+    case you most want to see."""
+    log = _two_sessions(tmp_path)
+    switches = [r for r in log.records if r.kind == "killswitch"]
+    assert switches and all(s.payload["observed"] == 0.0 for s in switches)
+    # ...yet the curve still shows the day's real move.
+    assert log.equity_curve()[1]["equity"] == 99760.0
+
+
+def test_the_overnight_gap_is_left_in(tmp_path):
+    """A position held through the close is marked to market before the next
+    open. Hiding that step would flatter the curve."""
+    curve = _two_sessions(tmp_path).equity_curve()
+    close_day1 = curve[1]["equity"]
+    open_day2 = curve[2]["equity"]
+    assert open_day2 != close_day1
+
+
+def test_a_position_open_across_two_sessions_appears_in_both(tmp_path):
+    ledger = {r["contract"]: r for r in _two_sessions(tmp_path).position_ledger()}
+    pltr = ledger["PLTR261016C00170000"]
+    assert pltr["sessions"] == ["2026-09-01", "2026-09-02"]
+    assert pltr["open"] is False
+    assert pltr["realized"] == pytest.approx((12.7 - 19.9) * 100)
+
+
+def test_a_still_open_position_has_no_exit_or_realised(tmp_path):
+    ledger = {r["contract"]: r for r in _two_sessions(tmp_path).position_ledger()}
+    nvda = ledger["NVDA261016C00220000"]
+    assert nvda["open"] is True
+    assert nvda["exit"] is None and nvda["realized"] is None
+    assert nvda["sessions"] == ["2026-09-02"]
+
+
+def test_the_summary_counts_across_sessions(tmp_path):
+    s = _two_sessions(tmp_path).portfolio()
+    assert s["open_positions"] == 1
+    assert s["closed_trades"] == 1
+    assert s["realized_pnl"] == pytest.approx(-720.0)
+    assert s["decisions_logged"] == 8
+
+
+def test_the_summary_reports_no_win_rate(tmp_path):
+    """At one closed trade a win rate is 0% or 100% and neither means
+    anything. A headline that reads as performance while being noise is worse
+    than no headline."""
+    s = _two_sessions(tmp_path).portfolio()
+    for banned in ("win_rate", "winrate", "wins", "losses", "hit_rate"):
+        assert banned not in s
+
+
+def test_the_portfolio_route_ignores_the_session_selector(log_dir):
+    """Cross-session by construction: filtering it by the selected session
+    would split a position across two views and show neither whole."""
+    from fastapi.testclient import TestClient
+
+    from src.dashboard.app import create_app
+
+    client = TestClient(create_app(log_dir))
+    everything = client.get("/api/portfolio").json()
+    filtered = client.get(f"/api/portfolio?session={SESSION}").json()
+    assert filtered["summary"] == everything["summary"]
+    assert filtered["positions"] == everything["positions"]
+
+
+def test_the_range_switcher_trims_the_curve_but_not_the_totals(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from src.dashboard.app import create_app
+
+    _two_sessions(tmp_path)
+    client = TestClient(create_app(tmp_path))
+    everything = client.get("/api/portfolio").json()
+    one_day = client.get("/api/portfolio?days=1").json()
+
+    assert len(one_day["equity"]) < len(everything["equity"])
+    assert {p["session"] for p in one_day["equity"]} == {"2026-09-02"}
+    # The headline must not move as someone changes the range.
+    assert one_day["summary"] == everything["summary"]
+    assert one_day["positions"] == everything["positions"]

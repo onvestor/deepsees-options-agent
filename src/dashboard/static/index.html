@@ -52,6 +52,20 @@
                  border-radius:4px; padding:3px 6px; font:inherit; }
   .ro { border:1px solid var(--line); border-radius:4px; padding:2px 8px; color:var(--dim); font-size:11px; }
   .wrap { overflow-x:auto; }
+  .split { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; }
+  .chartbox { flex:1 1 520px; min-width:340px; background:var(--panel);
+              border:1px solid var(--line); border-radius:6px; padding:12px 14px; }
+  .sidebox { flex:0 1 250px; }
+  .range { display:flex; gap:4px; }
+  .range button { background:none; border:1px solid var(--line); color:var(--dim);
+                  border-radius:4px; padding:2px 10px; cursor:pointer;
+                  font:inherit; font-size:11px; }
+  .range button.on { color:var(--ink); border-color:var(--key); }
+  .chead { display:flex; align-items:baseline; gap:12px; margin-bottom:8px; }
+  svg .grid { stroke:var(--line); stroke-width:1; }
+  svg .line { fill:none; stroke:var(--key); stroke-width:1.6; }
+  svg .divl { stroke:var(--mute); stroke-width:1; stroke-dasharray:3 3; }
+  svg text  { fill:var(--dim); font-size:10px; }
 </style>
 </head>
 <body>
@@ -64,14 +78,16 @@
 </header>
 
 <nav>
-  <button data-v="status" class="on">Live status</button>
+  <button data-v="portfolio" class="on">Portfolio</button>
+  <button data-v="status">Live status</button>
   <button data-v="timeline">Session timeline</button>
   <button data-v="traces">Decision trace</button>
   <button data-v="guard">Guardrail events</button>
 </nav>
 
 <main>
-  <section id="status" class="on"></section>
+  <section id="portfolio" class="on"></section>
+  <section id="status"></section>
   <section id="timeline"></section>
   <section id="traces"></section>
   <section id="guard"></section>
@@ -264,8 +280,120 @@ function table(head, rows, raw=false, classes=null, ids=null) {
   return h + '</tbody></table>';
 }
 
-const VIEWS = {status:renderStatus, timeline:renderTimeline, traces:renderTraces, guard:renderGuard};
-let CURRENT = 'status';
+// ---------- view: portfolio (always cross-session) ----------
+let RANGE = null;   // null = all sessions, else N most recent
+
+async function renderPortfolio() {
+  const r = await fetch('/api/portfolio' + (RANGE ? '?days=' + RANGE : ''));
+  if (!r.ok) throw new Error(await r.text());
+  const d = await r.json();
+  const s = d.summary, pts = d.equity;
+
+  const btn = (label, val) =>
+    '<button data-range="' + (val === null ? '' : val) + '" class="' +
+    (RANGE === val ? 'on' : '') + '">' + label + '</button>';
+
+  let h = '<div class="note">Every figure here spans <b>all ' + s.sessions.length +
+    ' bundled session(s)</b> and ignores the session selector above — a position ' +
+    'opened on one session and closed on another belongs to both, and an equity curve ' +
+    'that reset each morning would not be a curve. Account ' +
+    (s.accounts.map(function (a) { return '…' + esc(a); }).join(', ') || 'unrecorded') +
+    '.</div>';
+
+  h += '<div class="split">';
+  h += '<div class="chartbox"><div class="chead"><b>Equity</b>' +
+       '<span class="dim">' + pts.length + ' points, from session records</span>' +
+       '<span style="flex:1"></span><span class="range">' +
+       btn('1D', 1) + btn('5D', 5) + btn('All', null) + '</span></div>' +
+       sparkline(pts) + '</div>';
+
+  const cls = s.realized_pnl > 0 ? 'ok' : s.realized_pnl < 0 ? 'bad' : '';
+  h += '<div class="sidebox">' +
+    card(s.open_positions, 'open positions') +
+    card(s.closed_trades, 'closed trades') +
+    card(num(s.realized_pnl), 'realised P&amp;L', cls) +
+    card(s.decisions_logged.toLocaleString(), 'decisions logged') +
+    '<div class="note" style="margin-top:10px">No win rate: at ' + s.closed_trades +
+    ' closed trade(s) it is 0% or 100%, and a headline that reads as performance ' +
+    'while being noise is worse than none.</div></div>';
+  h += '</div>';
+
+  h += '<h2>Positions across sessions</h2><div class="note">Reconstructed from logged ' +
+       'fills. A position appears against every session it was open during.</div><div class="wrap">';
+  h += table(['contract', 'symbol', 'qty', 'entry', 'exit', 'realised', 'state', 'sessions open'],
+    d.positions.map(function (p) {
+      const rp = (p.realized === null || p.realized === undefined)
+        ? '<span class="dim">—</span>'
+        : '<span class="' + (p.realized > 0 ? 'ok' : p.realized < 0 ? 'bad' : '') + '">' +
+          num(p.realized) + '</span>';
+      return [esc(p.contract), esc(p.symbol), p.qty, num(p.entry),
+        (p.exit === null || p.exit === undefined) ? '<span class="dim">—</span>' : num(p.exit),
+        rp,
+        p.open ? '<span class="warn">open</span>' : '<span class="dim">closed</span>',
+        p.sessions.map(function (x) { return '<span class="pill">' + esc(x) + '</span>'; }).join(' ')];
+    }), true);
+  h += '</div>';
+
+  $('#portfolio').innerHTML = h;
+  document.querySelectorAll('#portfolio .range button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      RANGE = b.dataset.range === '' ? null : Number(b.dataset.range);
+      renderPortfolio();
+    });
+  });
+}
+
+function card(n, label, cls) {
+  return '<div class="card" style="margin-bottom:10px"><div class="n ' + (cls || '') +
+         '">' + n + '</div><div class="l">' + label + '</div></div>';
+}
+
+function sparkline(pts) {
+  if (!pts.length) return '<div class="note">No equity recorded.</div>';
+  const W = 640, H = 180, PAD = 44;
+  const ys = pts.map(function (p) { return p.equity; });
+  let lo = Math.min.apply(null, ys), hi = Math.max.apply(null, ys);
+  if (hi === lo) { hi = lo + 1; lo = lo - 1; }   // a flat session still needs an axis
+  const gap = (hi - lo) * 0.12; lo -= gap; hi += gap;
+  // Plotted by index rather than clock time: that collapses the overnight gap
+  // into a visible step instead of a long flat run, and the step is real P&L.
+  const X = function (i) { return PAD + (i / Math.max(1, pts.length - 1)) * (W - PAD - 8); };
+  const Y = function (v) { return H - 22 - ((v - lo) / (hi - lo)) * (H - 40); };
+
+  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H +
+            '" role="img" aria-label="equity curve">';
+  for (let g = 0; g <= 3; g++) {
+    const v = lo + (hi - lo) * g / 3, y = Y(v);
+    svg += '<line class="grid" x1="' + PAD + '" y1="' + y.toFixed(1) + '" x2="' +
+           (W - 8) + '" y2="' + y.toFixed(1) + '"/>';
+    svg += '<text x="2" y="' + (y + 3).toFixed(1) + '">' + v.toFixed(0) + '</text>';
+  }
+  pts.forEach(function (p, i) {
+    if (i && p.session !== pts[i - 1].session) {
+      const x = X(i).toFixed(1);
+      svg += '<line class="divl" x1="' + x + '" y1="14" x2="' + x + '" y2="' + (H - 22) + '"/>';
+      svg += '<text x="' + (X(i) + 3).toFixed(1) + '" y="12">' + esc(p.session.slice(5)) + '</text>';
+    }
+  });
+  svg += '<text x="' + PAD + '" y="12">' + esc(pts[0].session.slice(5)) + '</text>';
+  svg += '<polyline class="line" points="' +
+         pts.map(function (p, i) { return X(i).toFixed(1) + ',' + Y(p.equity).toFixed(1); }).join(' ') +
+         '"/>';
+  svg += '</svg>';
+
+  const first = pts[0].equity, last = pts[pts.length - 1].equity, delta = last - first;
+  const dcls = delta > 0 ? 'ok' : delta < 0 ? 'bad' : 'dim';
+  return svg + '<div class="note" style="margin:4px 0 0">' +
+    esc(pts[0].session) + ' ' + esc(pts[0].time) + ' → ' +
+    esc(pts[pts.length - 1].session) + ' ' + esc(pts[pts.length - 1].time) + ' · ' +
+    first.toLocaleString() + ' → ' + last.toLocaleString() +
+    ' <span class="' + dcls + '">(' + (delta >= 0 ? '+' : '') + delta.toFixed(2) + ')</span>' +
+    ' · dashed lines are session boundaries; the step across one is overnight ' +
+    'mark-to-market and is left in deliberately.</div>';
+}
+
+const VIEWS = {portfolio:renderPortfolio, status:renderStatus, timeline:renderTimeline, traces:renderTraces, guard:renderGuard};
+let CURRENT = 'portfolio';
 
 async function show(v) {
   CURRENT = v;
@@ -296,7 +424,7 @@ $('#session').addEventListener('change', e => { SESSION = e.target.value || null
     if (s.sessions.length) { SESSION = s.sessions[s.sessions.length-1]; $('#session').value = SESSION; }
     $('#src').textContent = s.sessions.length + ' session(s) · ' + s.sources.length + ' log file(s)';
   } catch (e) { $('#src').textContent = 'log unavailable'; }
-  show('status');
+  show('portfolio');
   // The log grows while a session runs; a stale dashboard during a live
   // session would be worse than a slightly chatty one.
   setInterval(() => show(CURRENT), 30000);

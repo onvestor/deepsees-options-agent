@@ -308,6 +308,125 @@ class Log:
             },
         }
 
+    # -- cross-session portfolio --------------------------------------------
+
+    def equity_curve(self) -> list[dict[str, Any]]:
+        """Equity across every loaded session, in time order.
+
+        **Read from session records, not kill-switch records.** A kill switch's
+        ``observed`` for the daily-loss switches is ``max(0, -session_pnl)`` --
+        floored at zero, so it is 0.0000 for an entire session that finished
+        flat or up, and reconstructing equity from it is impossible in exactly
+        the case you most want to see. ``SessionPayload.equity`` is the account
+        equity as read from the broker, written by the reconcile job roughly
+        every five minutes: ~79 points a session.
+
+        Overnight gaps are left in. A position held through the close is marked
+        to market before the next open, so the step between one session's last
+        point and the next session's first is real P&L and hiding it would
+        flatter the curve.
+        """
+        points = []
+        for r in self.records:
+            if r.kind != "session":
+                continue
+            equity = r.payload.get("equity")
+            if equity is None:
+                continue
+            points.append({
+                "session": r.raw.get("session_date", ""),
+                "time": r.clock,
+                "ts": r.raw.get("ts_utc", ""),
+                "equity": float(equity),
+            })
+        points.sort(key=lambda p: (p["session"], p["ts"]))
+        return points
+
+    def position_ledger(self) -> list[dict[str, Any]]:
+        """Every position built from fills, spanning sessions.
+
+        A position opened on one session and closed on another belongs to both,
+        so each entry carries the list of sessions it was open during rather
+        than a single date. Reconstructed from logged fills alone -- if a fill
+        is not in the log the position is not here, which is the same rule the
+        rest of the dashboard follows.
+        """
+        open_by_contract: dict[str, dict[str, Any]] = {}
+        closed: list[dict[str, Any]] = []
+
+        for r in self.records:
+            if r.kind != "order":
+                continue
+            p = r.payload
+            legs = p.get("legs") or []
+            filled = float(p.get("filled_qty") or 0)
+            price = p.get("filled_avg_price")
+            if not legs or filled <= 0 or price is None:
+                continue
+            contract, session = legs[0], r.raw.get("session_date", "")
+
+            if p.get("intent") == "buy_to_open":
+                open_by_contract[contract] = {
+                    "contract": contract,
+                    "symbol": r.symbol or "",
+                    "qty": int(filled),
+                    "entry": float(price),
+                    "opened_session": session,
+                    "opened_time": r.clock,
+                }
+            elif p.get("intent") == "sell_to_close":
+                held = open_by_contract.pop(contract, None)
+                if held is None:
+                    continue
+                held.update({
+                    "exit": float(price),
+                    "closed_session": session,
+                    "closed_time": r.clock,
+                    "realized": round(
+                        (float(price) - held["entry"]) * held["qty"] * 100.0, 2
+                    ),
+                })
+                closed.append(held)
+
+        ledger = closed + list(open_by_contract.values())
+        sessions = self.sessions
+        for row in ledger:
+            first = row["opened_session"]
+            last = row.get("closed_session")
+            row["open"] = last is None
+            # Every session the position was open during, inclusive of both
+            # ends -- the whole point of a cross-session ledger.
+            row["sessions"] = [
+                s for s in sessions if s >= first and (last is None or s <= last)
+            ]
+            if row["open"]:
+                row.setdefault("realized", None)
+                row.setdefault("exit", None)
+        ledger.sort(key=lambda r: (r["opened_session"], r["opened_time"]))
+        return ledger
+
+    def portfolio(self) -> dict[str, Any]:
+        """The cross-session headline.
+
+        **No win rate.** With one closed trade it is 0% or 100% and neither
+        means anything; a headline number that reads as performance while being
+        noise is worse than no headline number.
+        """
+        ledger = self.position_ledger()
+        closed = [r for r in ledger if not r["open"]]
+        curve = self.equity_curve()
+        return {
+            "sessions": self.sessions,
+            "accounts": self.accounts_for(None),
+            "open_positions": sum(1 for r in ledger if r["open"]),
+            "closed_trades": len(closed),
+            "realized_pnl": round(sum(r["realized"] or 0.0 for r in closed), 2),
+            "decisions_logged": len(self.records),
+            "equity_first": curve[0]["equity"] if curve else None,
+            "equity_last": curve[-1]["equity"] if curve else None,
+            "curve_points": len(curve),
+        }
+
     # -- view 4: status -----------------------------------------------------
 
     def status(self, session: str | None = None) -> dict[str, Any]:
